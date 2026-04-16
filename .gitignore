@@ -1,0 +1,23 @@
+# macOS 系统文件
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# PDF 原书文件（太大，不适合 Git）
+knowledge-base/raw/*.pdf
+
+# Obsidian 工作区状态（个人环境，不需要同步）
+workspace.json
+workspace-mobile.json
+
+# 临时文件
+*.tmp
+*.swp
+*.bak
+~$*
+
+# 系统文件
+Thumbs.db
+ehthumbs.db
+Desktop.ini
