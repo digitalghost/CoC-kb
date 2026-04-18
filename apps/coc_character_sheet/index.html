@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>克苏鲁的呼唤 第七版 - 调查员角色卡创建器</title>
+
+  <!-- ===== CSS 样式 ===== -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+<div class="app-container">
+  <div class="app-header">
+    <h1>&#9764; 克苏鲁的呼唤 第七版 &#9764;</h1>
+    <div class="subtitle">Call of Cthulhu Investigator Character Creator</div>
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="progress-bar" id="progressBar"></div>
+
+  <!-- Step Content Container -->
+  <div id="stepContainer"></div>
+
+  <!-- Navigation -->
+  <div class="nav-buttons" id="navButtons"></div>
+</div>
+
+<!-- ===== JavaScript 模块 ===== -->
+<!-- 加载顺序：数据层 → 状态管理 → 工具函数 → 骰子引擎 → 渲染层 → 导航 → 初始化 -->
+
+<!-- 数据层 -->
+<script src="js/data/skills.js"></script>
+<script src="js/data/occupations.js"></script>
+<script src="js/data/tables.js"></script>
+
+<!-- 状态管理 -->
+<script src="js/state.js"></script>
+
+<!-- 工具函数 -->
+<script src="js/utils.js"></script>
+
+<!-- 骰子物理引擎 -->
+<script src="js/dice-physics.js"></script>
+
+<!-- 渲染层 -->
+<script src="js/render/progress.js"></script>
+<script src="js/render/steps-1to4.js"></script>
+<script src="js/render/steps-5to8.js"></script>
+<script src="js/render/router.js"></script>
+
+<!-- 导航和导出 -->
+<script src="js/navigation.js"></script>
+
+<!-- 应用初始化 -->
+<script src="js/init.js"></script>
+
+</body>
+</html>
