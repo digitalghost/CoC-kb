@@ -286,6 +286,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 }
 .skill-slider .slider-val {
   display: inline-block;
+  width: 36px;
   min-width: 28px;
   text-align: center;
   font-size: 0.85rem;
@@ -296,6 +297,21 @@ button:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
   border-radius: 3px;
   background: var(--input-bg);
   border: 1px solid var(--input-border);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.skill-slider .slider-val:focus {
+  border-color: var(--slider-color);
+  box-shadow: 0 0 0 2px rgba(201,168,76,0.12);
+}
+.slider-disabled {
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  color: var(--text-muted);
+  opacity: 0.4;
+  font-size: 0.85rem;
+  user-select: none;
 }
 .skill-points-info {
   background: var(--bg-card);
@@ -443,6 +459,50 @@ button:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* 自定义技能区域 */
+.occ-custom-section {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.occ-custom-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
+  margin-bottom: 8px;
+}
+.occ-custom-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.occ-custom-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.occ-custom-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  background: rgba(201,168,76,0.1);
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 4px;
+  color: var(--gold);
+}
+.occ-custom-tag-remove {
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 0.7rem;
+  line-height: 1;
+  transition: opacity 0.15s;
+}
+.occ-custom-tag-remove:hover {
+  opacity: 1;
+}
+
 .occ-summary {
   margin-top: 12px;
   padding: 10px;
@@ -924,6 +984,410 @@ button:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
   .card { box-shadow: none; border-color: #ccc; }
 }
 
+/* ===== Equipment (Step 8) ===== */
+.equip-credit-info {
+  background: rgba(201,168,76,0.06);
+  border: 1px solid var(--gold-dim);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+.equip-credit-info .eci-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(30,42,58,0.5);
+}
+.equip-credit-info .eci-row:last-child {
+  border-bottom: none;
+}
+.equip-credit-info .eci-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.equip-credit-info .eci-value {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.equip-credit-info .eci-level {
+  color: var(--gold);
+  font-size: 0.85rem;
+}
+.equip-credit-info .eci-cash {
+  color: var(--gold-bright);
+  font-family: Georgia, serif;
+  font-size: 1.1rem;
+}
+
+/* 搜索框区域 */
+.equip-search-box {
+  margin-bottom: 20px;
+}
+.equip-search-header {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.equip-search-input-wrap {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+}
+.equip-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.equip-search-input {
+  width: 100%;
+  padding: 8px 12px 8px 32px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.equip-search-input:focus {
+  outline: none;
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 0 2px rgba(201,168,76,0.1);
+}
+.equip-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* 自定义添加区域 */
+.equip-custom-add {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.equip-custom-input {
+  padding: 8px 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  transition: border-color 0.2s;
+}
+.equip-custom-input:focus {
+  outline: none;
+  border-color: var(--gold-dim);
+}
+.equip-custom-input::placeholder {
+  color: var(--text-muted);
+}
+.equip-custom-name {
+  width: 140px;
+}
+.equip-custom-price {
+  width: 70px;
+}
+
+/* 搜索建议下拉列表 */
+.equip-suggestions {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  margin-top: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px var(--shadow);
+}
+.equip-suggestion-empty {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 12px;
+}
+.equip-suggestion-group {
+  margin-bottom: 8px;
+}
+.equip-suggestion-group:last-child {
+  margin-bottom: 0;
+}
+.equip-suggestion-cat {
+  font-size: 0.75rem;
+  color: var(--gold);
+  font-weight: 500;
+  padding: 4px 8px;
+  background: rgba(201,168,76,0.08);
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+.equip-suggestion-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.equip-suggestion-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 0.8rem;
+}
+.equip-suggestion-item:hover:not(.already-added) {
+  border-color: var(--gold-dim);
+  background: rgba(201,168,76,0.08);
+}
+.equip-suggestion-item.already-added {
+  opacity: 0.5;
+  cursor: default;
+}
+.equip-suggestion-item .esi-name {
+  color: var(--text-primary);
+}
+.equip-suggestion-item .esi-price {
+  color: var(--gold);
+  font-size: 0.75rem;
+}
+.equip-suggestion-item .esi-added-tag {
+  font-size: 0.65rem;
+  color: var(--green);
+}
+
+/* 分类标签按钮容器 */
+.equip-category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* 分类标签按钮 */
+.equip-cat-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.equip-cat-tab:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
+.equip-cat-tab.active {
+  background: rgba(201,168,76,0.15);
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 500;
+}
+
+/* 分类物品网格 */
+.equip-category-items {
+  margin-top: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 2px 8px var(--shadow);
+}
+.equip-category-header {
+  font-size: 0.8rem;
+  color: var(--gold);
+  font-weight: 500;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.equip-category-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.equip-cat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 0.8rem;
+}
+.equip-cat-item:hover:not(.already-added) {
+  border-color: var(--gold-dim);
+  background: rgba(201,168,76,0.08);
+}
+.equip-cat-item.already-added {
+  opacity: 0.5;
+  cursor: default;
+}
+.equip-cat-item .eci-name {
+  color: var(--text-primary);
+}
+.equip-cat-item .eci-price {
+  color: var(--gold);
+  font-size: 0.75rem;
+}
+.equip-cat-item .eci-added-tag {
+  font-size: 0.65rem;
+  color: var(--green);
+}
+
+/* 我的随身物品 */
+.equip-my-items {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.equip-my-items-title {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--gold);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.equip-empty {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 20px 0;
+}
+
+/* 物品行 */
+.equip-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(30,42,58,0.5);
+  transition: background 0.15s;
+}
+.equip-item:last-of-type {
+  border-bottom: none;
+}
+.equip-item:hover {
+  background: rgba(201,168,76,0.03);
+}
+.equip-item .ei-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.equip-item .ei-name {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+.equip-item .ei-type {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  padding: 1px 6px;
+  background: rgba(201,168,76,0.06);
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.equip-item .ei-price {
+  font-size: 0.85rem;
+  color: var(--gold);
+  font-family: Georgia, serif;
+  white-space: nowrap;
+}
+.equip-item .ei-remove {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.equip-item .ei-remove:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: rgba(166,61,64,0.1);
+}
+
+/* 花费汇总 */
+.equip-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(201,168,76,0.06);
+  border: 1px solid var(--gold-dim);
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+.equip-summary .equip-spent-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.equip-summary .equip-spent-value {
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--gold);
+  font-family: Georgia, serif;
+}
+.equip-summary .equip-spent-value.over-budget {
+  color: var(--red);
+}
+.equip-summary .equip-remaining {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+  .equip-search-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .equip-custom-add {
+    flex-wrap: wrap;
+  }
+  .equip-custom-name {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+  }
+  .equip-item .ei-type {
+    display: none;
+  }
+  .equip-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+
 /* ===== Decorative ===== */
 .ornament {
   text-align: center;
@@ -957,4 +1421,125 @@ button:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
   color: var(--gold);
   border-radius: 2px;
   margin-left: 4px;
+}
+
+/* ===== Custom Occupation ===== */
+.occ-custom-occ-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(201,168,76,0.04);
+  border: 1px dashed var(--gold-dim);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+  color: var(--gold);
+  margin-bottom: 16px;
+}
+.occ-custom-occ-trigger:hover {
+  background: rgba(201,168,76,0.1);
+  border-color: var(--gold);
+}
+.occ-custom-occ-icon {
+  font-size: 1.1rem;
+}
+
+.occ-custom-occ-panel {
+  background: var(--input-bg);
+  border: 1px solid var(--gold-dim);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.occ-custom-occ-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.occ-custom-occ-header h4 {
+  font-size: 0.95rem;
+  color: var(--gold);
+  margin: 0;
+}
+.occ-custom-occ-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.occ-custom-occ-form {
+  margin-bottom: 4px;
+}
+.occ-custom-occ-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-dim) 20%, var(--gold-dim) 80%, transparent);
+  margin: 12px 0;
+}
+.occ-custom-occ-skills-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.occ-custom-occ-count {
+  font-size: 0.75rem;
+  color: var(--gold);
+}
+.occ-custom-occ-count.full {
+  color: var(--green);
+}
+.occ-custom-occ-skills-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+  background: rgba(0,0,0,0.1);
+  border-radius: 6px;
+}
+.occ-custom-occ-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+.occ-cr-input {
+  width: 56px;
+  text-align: center;
+  padding: 4px 6px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+}
+.occ-pts-input {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--gold);
+  font-size: 0.9rem;
+  font-weight: bold;
+  text-align: center;
+  letter-spacing: 0.5px;
+  transition: border-color 0.2s;
+}
+.occ-pts-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201,168,76,0.15);
+}
+.occ-pts-input::placeholder {
+  color: var(--text-muted);
+  font-weight: normal;
+  font-size: 0.75rem;
 }

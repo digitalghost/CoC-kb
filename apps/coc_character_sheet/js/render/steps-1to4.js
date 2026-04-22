@@ -11,22 +11,26 @@
 //   - selectOccupation(idx)       选择职业并初始化技能点
 // 注意: rollAllAttributes 在 dice-physics.js 中（与骰子动画紧密相关）
 
-// ----- Random Name Generator -----
+// ----- Random Name Generator (1920s New England style, Chinese transliteration) -----
 function generateRandomName() {
-  const surnames = [
-    '陈', '林', '张', '王', '李', '赵', '黄', '周', '吴', '徐',
-    '孙', '胡', '朱', '高', '何', '郭', '马', '罗', '梁', '宋',
-    '郑', '谢', '韩', '唐', '冯', '于', '董', '萧', '程', '曹',
-    '袁', '邓', '许', '傅', '沈', '曾', '彭', '吕', '苏', '卢'
+  const firstNames = [
+    '亨利', '查尔斯', '爱德华', '乔治', '詹姆斯', '威廉', '罗伯特', '托马斯',
+    '亚瑟', '弗朗西斯', '阿尔伯特', '弗雷德里克', '赫伯特', '沃尔特', '哈罗德', '塞缪尔',
+    '霍华德', '理查德', '欧内斯特', '雷蒙德', '拉尔夫', '埃德温', '克拉伦斯', '珀西',
+    '阿格尼丝', '爱丽丝', '克拉拉', '多萝西', '埃莉诺', '伊丽莎白', '弗洛伦丝', '格蕾丝',
+    '海伦', '艾琳', '玛格丽特', '玛莎', '米尔德丽德', '罗丝', '露丝', '维奥莱特',
+    '凯瑟琳', '莉莲', '伊迪丝', '碧翠丝', '康斯坦丝', '哈丽雅特', '约瑟芬'
   ];
-  const givenNames = [
-    '怀安', '志远', '明德', '书恒', '承志', '天佑', '文彬', '景行',
-    '逸尘', '子轩', '浩然', '思源', '一鸣', '鹏飞', '国栋', '家骏',
-    '雅琴', '淑芬', '慧兰', '婉清', '静怡', '雪梅', '玉珍', '秀英',
-    '若兰', '梦瑶', '心怡', '紫萱', '语嫣', '诗涵', '晓彤', '佳慧'
+  const lastNames = [
+    '哈特韦尔', '布莱克伍德', '马洛', '惠特莫尔', '卡特', '辛克莱', '阿什沃思',
+    '温斯洛', '哈格罗夫', '斯特林', '彭伯顿', '桑顿', '克劳福德', '莫里森',
+    '黑斯廷斯', '普雷斯科特', '兰福德', '奥尔德里奇', '蒙塔古', '惠特菲尔德', '万斯',
+    '布拉德利', '霍洛韦', '克雷文', '马什', '吉尔曼', '德比', '皮克曼',
+    '阿米蒂奇', '赖斯', '摩根', '沃伦', '道格拉斯', '格雷', '查普曼', '弗莱彻',
+    '赖特', '亨特', '考特', '弗林德斯', '霍布豪斯', '怀亚特', '斯通'
   ];
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
-  return pick(surnames) + pick(givenNames);
+  return pick(firstNames) + ' ' + pick(lastNames);
 }
 
 // ----- Step 1: Basic Info -----
@@ -43,7 +47,10 @@ function renderStep1(container) {
       <div class="form-row">
         <div class="form-group">
           <label>调查员姓名</label>
-          <input type="text" id="charName" value="${state.name}" placeholder="输入姓名..." oninput="state.name=this.value;saveState()">
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="charName" value="${state.name}" placeholder="输入姓名..." style="flex:1;" oninput="state.name=this.value;saveState()">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('charName').value=generateRandomName();state.name=document.getElementById('charName').value;saveState()" title="随机生成新名字">🎲</button>
+          </div>
         </div>
         <div class="form-group">
           <label>性别</label>
@@ -61,12 +68,13 @@ function renderStep1(container) {
         </div>
         <div class="form-group">
           <label>时代</label>
-          <select id="charEra" onchange="state.era=this.value;saveState()">
-            <option value="1920s" ${state.era==='1920s'?'selected':''}>1920年代（经典）</option>
+          <select id="charEra" onchange="onEraChange(this.value)">
+            <option value="1920s" ${state.era==='1920s'?'selected':''}>1920年代（经典洛式）</option>
             <option value="现代" ${state.era==='现代'?'selected':''}>现代</option>
-            <option value="维多利亚" ${state.era==='维多利亚'?'selected':''}>维多利亚时代</option>
-            <option value="其他" ${state.era==='其他'?'selected':''}>其他</option>
           </select>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">
+            ${state.era==='1920s' ? '📖 禁酒令、爵士乐、黑帮崛起的黄金年代' : '💻 科技发达的现代世界，拥有计算机与互联网'}
+          </div>
         </div>
       </div>
     </div>
@@ -76,6 +84,32 @@ function renderStep1(container) {
 function updateAttr(key, val) {
   state.rawAttrs[key] = clamp(parseInt(val) || 0, 0, 99);
   saveState();
+  renderStep();
+}
+
+// ----- Era Change Handler -----
+// 切换年代时重置后续步骤数据，防止数据不一致
+function onEraChange(newEra) {
+  if (state.era === newEra) return;
+  let oldEra = state.era;
+  state.era = newEra;
+  // 重置职业相关数据
+  state.occupation = null;
+  state.creditRating = 0;
+  state.selectedOccSkills = [];
+  state.fixedSpecialtyChoices = {};
+  state.customSkillGroups = {};
+  state.customOccForm = { name: '', creditRatingMin: 0, creditRatingMax: 99, occupationalPoints: 0, selectedSkills: [] };
+  state.occupationalPoints = 0;
+  state.interestPoints = 0;
+  state.occupationalUsed = 0;
+  state.interestUsed = 0;
+  state.skillPoints = {};
+  // 重置装备数据
+  state.equipment = [];
+  state.spendingCash = 0;
+  saveState();
+  notify(`时代已切换为「${newEra === '1920s' ? '1920年代' : '现代'}」，后续步骤数据已重置`, 'info');
   renderStep();
 }
 
@@ -258,27 +292,215 @@ function resetAgeAdjustment() {
 // ----- Step 4: Occupation -----
 function renderStep4(container) {
   let attrs = getEffectiveAttrs();
+  let currentEra = state.era || '1920s';
+  let eraLabel = currentEra === '1920s' ? '1920年代' : '现代';
+
+  // 根据年代过滤职业
+  let filteredOccs = OCCUPATIONS.filter(occ => occ.eras && occ.eras.includes(currentEra));
+
   let html = `
     <div class="card">
       <div class="card-title"><span class="icon">&#9873;</span> 职业选择</div>
-      <p class="section-desc">选择调查员的职业。洛式职业标记有金色标签，适合洛夫克拉夫特式调查。</p>
+      <p class="section-desc">
+        当前时代：<strong>${eraLabel}</strong> — 共 ${filteredOccs.length} 个可用职业。
+        洛式职业标记有金色标签，适合洛夫克拉夫特式调查。
+      </p>
       <div class="occ-list">
   `;
-  OCCUPATIONS.forEach((occ, idx) => {
+  filteredOccs.forEach((occ) => {
+    // 使用原始 OCCUPATIONS 数组中的索引，确保 selectOccupation 能正确找到
+    let origIdx = OCCUPATIONS.indexOf(occ);
     let selected = state.occupation && state.occupation.name === occ.name;
     let tag = occ.lovecraft ? '<span class="tag-lovecraft">洛式</span>' : '';
+    let eraTag = '';
+    if (occ.eras.length === 2) {
+      eraTag = '<span style="font-size:0.7rem;color:var(--text-muted);border:1px solid var(--border-color);border-radius:3px;padding:0 4px;margin-left:4px;">通用</span>';
+    }
     html += `
-      <div class="occ-item ${selected ? 'selected' : ''}" onclick="selectOccupation(${idx})">
-        <div class="occ-name">${occ.name} ${tag}</div>
+      <div class="occ-item ${selected ? 'selected' : ''}" onclick="selectOccupation(${origIdx})">
+        <div class="occ-name">${occ.name} ${tag}${eraTag}</div>
         <div class="occ-cr">信用评级: ${occ.creditRating[0]}-${occ.creditRating[1]} | 技能点: ${occ.skillPoints}</div>
       </div>
     `;
   });
   html += `</div>`;
 
+  // 判断是否正在编辑自定义职业
+  let isEditingCustom = !state.occupation && state.customOccForm && state.customOccForm.name !== undefined;
+
+  // 创建自定义职业按钮（始终显示，已选职业时显示为"切换"）
+  if (!isEditingCustom) {
+    let triggerLabel = state.occupation ? '切换到自定义职业' : '创建自定义职业';
+    let triggerHint = state.occupation ? '放弃当前选择，创建全新的自定义职业' : '所有技能由你自由选择';
+    html += `
+      <div class="occ-custom-occ-trigger" onclick="resetToCustomOccupation()">
+        <span class="occ-custom-occ-icon">✦</span>
+        <span>${triggerLabel}</span>
+        <span style="font-size:0.7rem;color:var(--text-muted);margin-left:auto;">${triggerHint}</span>
+      </div>
+    `;
+  }
+
+  // 自定义职业编辑面板
+  if (isEditingCustom) {
+    let form = state.customOccForm;
+    let availableSkills = getCustomOccAvailableSkills();
+    let selected = form.selectedSkills || [];
+    let maxSkills = 8;
+
+    html += `
+      <div class="occ-custom-occ-panel">
+        <div class="occ-custom-occ-header">
+          <h4>✦ 创建自定义职业</h4>
+          <button class="btn btn-secondary btn-sm" onclick="cancelCustomOccupation()">取消</button>
+        </div>
+        <div class="occ-custom-occ-hint">
+          自定义职业允许你自由选择技能组合。信用评级自动包含，最多再选 8 项技能（信用评级不计入，总计 9 项）。
+        </div>
+
+        <div class="occ-custom-occ-form">
+          <div class="form-row">
+            <div class="form-group" style="flex:2;">
+              <label>职业名称</label>
+              <input type="text" id="customOccName" value="${form.name}" placeholder="输入职业名称…"
+                oninput="state.customOccForm.name=this.value;saveState()">
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>信用评级范围</label>
+              <div style="display:flex;gap:4px;align-items:center;">
+                <input type="number" id="customOccCRMin" value="${form.creditRatingMin}" min="0" max="99"
+                  class="occ-cr-input"
+                  oninput="state.customOccForm.creditRatingMin=parseInt(this.value)||0;saveState()">
+                <span style="color:var(--text-muted);">—</span>
+                <input type="number" id="customOccCRMax" value="${form.creditRatingMax}" min="0" max="99"
+                  class="occ-cr-input"
+                  oninput="state.customOccForm.creditRatingMax=parseInt(this.value)||99;saveState()">
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="flex:1;">
+              <label>本职技能点数</label>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <input type="number" id="customOccPts" value="${form.occupationalPoints || ''}" min="0" max="999"
+                  placeholder="输入技能点数…"
+                  class="occ-pts-input"
+                  oninput="state.customOccForm.occupationalPoints=parseInt(this.value)||0;saveState()">
+                <span style="font-size:0.7rem;color:var(--text-muted);white-space:nowrap;">点</span>
+              </div>
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>已选技能</label>
+              <div style="font-size:0.85rem;color:var(--gold);font-weight:bold;">
+                信用评级 + ${selected.length} 项 = ${1 + selected.length} / 9
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="occ-custom-occ-divider"></div>
+
+        <div class="occ-custom-occ-skills">
+          <div class="occ-custom-occ-skills-header">
+            <span>选择职业技能（最多 ${maxSkills} 项）</span>
+            <span class="occ-custom-occ-count ${selected.length >= maxSkills ? 'full' : ''}">${selected.length} / ${maxSkills}</span>
+          </div>
+          <div class="occ-custom-occ-skills-grid">
+    `;
+
+    // 分离普通技能和父技能
+    let normalSkills = [];
+    let parentSkills = [];
+    availableSkills.forEach(sk => {
+      if (isParentSkill(sk) && SPECIALTY_MAP[sk]) {
+        parentSkills.push(sk);
+      } else {
+        normalSkills.push(sk);
+      }
+    });
+
+    // 渲染普通技能按钮
+    normalSkills.forEach(sk => {
+      let isSelected = selected.includes(sk);
+      let isDisabled = !isSelected && selected.length >= maxSkills;
+      html += `<button class="occ-choice-btn ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
+        onclick="toggleCustomOccSkill('${sk.replace(/'/g, "\\'")}')">${sk}</button>`;
+    });
+
+    html += `</div>`;
+
+    // 渲染父技能专攻选择器
+    parentSkills.forEach(parentName => {
+      let map = SPECIALTY_MAP[parentName];
+      let isFreeForm = map && map.freeForm;
+      let chosenOpt = selected.find(s => s.startsWith(parentName + '(')) || null;
+      let inputId = `customOcc_freeform_${parentName}`;
+      let onAddExpr = `addCustomOccFreeForm('${parentName}',document.getElementById('${inputId}').value)`;
+      // 收集已自定义添加的专精
+      let extraOpts = undefined;
+      if (isFreeForm) {
+        let presetOpts = new Set(getSpecialtyOptions(parentName));
+        extraOpts = selected.filter(s => s.startsWith(parentName + '(') && !presetOpts.has(s));
+      }
+
+      html += renderSpecialtySelector({
+        parentName: parentName,
+        chosen: chosenOpt,
+        mode: 'custom',
+        isFull: selected.length >= maxSkills,
+        onSelect: `toggleCustomOccSkill({opt})`,
+        inputId: isFreeForm ? inputId : undefined,
+        onAdd: isFreeForm ? onAddExpr : undefined,
+        extraOpts: extraOpts,
+      });
+    });
+
+    // 自定义技能输入区域
+    let customSkills = selected.filter(s => s.startsWith('__custom__:'));
+    let customDisplay = customSkills.map(s => s.slice(10)); // 去掉 __custom__: 前缀
+    html += `
+      <div class="occ-custom-section">
+        <div class="occ-custom-divider"></div>
+        <div class="occ-custom-label">✏️ 自定义技能</div>
+    `;
+    if (customDisplay.length > 0) {
+      html += `<div class="occ-custom-tags">`;
+      customDisplay.forEach(sk => {
+        html += `<span class="occ-custom-tag">
+          ${sk}
+          <span class="occ-custom-tag-remove" onclick="removeCustomOccSkillItem('${sk.replace(/'/g, "\\'")}')">✕</span>
+        </span>`;
+      });
+      html += `</div>`;
+    }
+    html += `
+        <div style="display:flex;gap:4px;align-items:center;margin-top:6px;">
+          <input type="text" id="customOcc_skillInput" placeholder="输入自定义技能名称…"
+            style="flex:1;padding:4px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text-primary);font-size:0.8rem;"
+            onkeydown="if(event.key==='Enter')addCustomOccSkillItem()">
+          <button class="btn btn-secondary btn-sm" onclick="addCustomOccSkillItem()">✚ 添加</button>
+        </div>
+      </div>
+    `;
+
+    html += `
+          </div>
+        </div>
+
+        <div class="occ-custom-occ-actions">
+          <button class="btn btn-gold" onclick="confirmCustomOccupation()">✓ 确认创建</button>
+          <button class="btn btn-secondary" onclick="cancelCustomOccupation()">取消</button>
+        </div>
+      </div>
+    `;
+  }
+
   if (state.occupation) {
-    let occ = state.occupation;
-    let pts = occ.getPoints(attrs);
+    let occName = state.occupation.name;
+    let occ = OCCUPATIONS.find(o => o.name === occName);
+    if (!occ) occ = state.occupation; // fallback（自定义职业走这里）
+    let attrs = getEffectiveAttrs();
+    let pts = occ.getPoints ? occ.getPoints(attrs) : (state.occupationalPoints || 0);
 
     // Check if all choice groups are satisfied
     let allGroupsComplete = true;
@@ -292,7 +514,7 @@ function renderStep4(container) {
       <div class="occ-detail">
         <h4>${occ.name}</h4>
         <div class="occ-info">
-          <p>技能点公式: <span>${occ.skillPoints}</span> = <span>${pts}</span> 点</p>
+          <p>本职技能点: <span>${pts}</span> 点</p>
           <p>信用评级范围: <span>${occ.creditRating[0]} - ${occ.creditRating[1]}</span></p>
         </div>
 
@@ -301,46 +523,33 @@ function renderStep4(container) {
           <div style="display:flex;flex-wrap:wrap;gap:4px;">
     `;
     occ.fixedSkills.forEach(s => {
-      if (isParentSkill(s)) {
-        // 父技能 → 展开为专精选择
+      // 检查是否是父技能的已指定子类型（如 "艺术和手艺(工程制图)"、"科学(工程学)"）
+      let parentMatch = null;
+      for (let p in SPECIALTY_MAP) {
+        if (s.startsWith(p + '(') && s.endsWith(')')) {
+          parentMatch = { parent: p, sub: s.slice(p.length + 1, -1) };
+          break;
+        }
+      }
+
+      if (parentMatch) {
+        // 已明确指定子类型 → 直接显示标签，不需要选择
+        html += `<span class="occ-fixed-tag">${s}</span>`;
+      } else if (isParentSkill(s)) {
+        // 纯父技能（无默认子类型）→ 使用统一的专攻选择器
         let chosen = state.fixedSpecialtyChoices[s] || null;
         let map = SPECIALTY_MAP[s];
-        if (map && map.freeForm) {
-          // freeForm 型父技能（语言、生存、操纵）
-          let presets = FREEFORM_PRESETS[s] || [];
-          html += `<div class="freeform-skill-group" style="padding:6px;background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px;">
-            <span style="font-size:0.8rem;color:var(--text-secondary);">${s}:</span>`;
-          presets.forEach(p => {
-            let optName = s + '(' + p + ')';
-            let isSel = chosen === optName;
-            html += `<button class="occ-choice-btn ${isSel ? 'selected' : ''}" style="font-size:0.75rem;padding:2px 6px;"
-              onclick="selectFixedSpecialty('${s}','${optName}')">${p}</button>`;
-          });
-          // 自定义输入
-          html += `<input type="text" id="fixedFreeform_${s}" placeholder="自定义…" 
-            style="width:80px;padding:2px 6px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text-primary);font-size:0.75rem;"
-            onkeydown="if(event.key==='Enter')selectFixedSpecialty('${s}','${s}('+this.value+')')">
-            <button class="btn btn-secondary" style="font-size:0.7rem;padding:2px 6px;" 
-              onclick="selectFixedSpecialty('${s}','${s}('+document.getElementById('fixedFreeform_${s}').value+')')">✚</button>`;
-          if (chosen) {
-            html += `<span class="occ-fixed-tag">${getSubFromSpecialty(chosen)}</span>`;
-          }
-          html += `</div>`;
-        } else {
-          // 固定列表型父技能（科学、艺术和手艺、格斗、射击）
-          let specialtyOpts = getSpecialtyOptions(s);
-          html += `<div class="freeform-skill-group" style="padding:6px;background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px;">
-            <span style="font-size:0.8rem;color:var(--text-secondary);">${s}:</span>`;
-          specialtyOpts.forEach(opt => {
-            let isSel = chosen === opt;
-            html += `<button class="occ-choice-btn ${isSel ? 'selected' : ''}" style="font-size:0.75rem;padding:2px 6px;"
-              onclick="selectFixedSpecialty('${s}','${opt}')">${getSubFromSpecialty(opt)}</button>`;
-          });
-          if (chosen) {
-            html += `<span class="occ-fixed-tag">✓ ${getSubFromSpecialty(chosen)}</span>`;
-          }
-          html += `</div>`;
-        }
+        let inputId = 'fixedFreeform_' + s;
+        let onAddExpr = `selectFixedSpecialty('${s}','${s}('+document.getElementById('${inputId}').value+')')`;
+        html += renderSpecialtySelector({
+          parentName: s,
+          chosen: chosen,
+          mode: 'fixed',
+          isFull: false,
+          onSelect: `selectFixedSpecialty('${s}',{opt})`,
+          inputId: map && map.freeForm ? inputId : undefined,
+          onAdd: map && map.freeForm ? onAddExpr : undefined,
+        });
       } else {
         html += `<span class="occ-fixed-tag">${s}</span>`;
       }
@@ -354,105 +563,128 @@ function renderStep4(container) {
     occ.choiceGroups.forEach((group, gIdx) => {
       let expandedOpts = expandSkillOptions(group.options);
 
-      // 收集该组中所有已选的技能（包括自由输入型专精）
-      let allGroupOpts = [...expandedOpts];
-      group.options.forEach(opt => {
-        if (isParentSkill(opt) && SPECIALTY_MAP[opt] && SPECIALTY_MAP[opt].freeForm) {
-          state.selectedOccSkills.forEach(s => {
-            if (s.startsWith(opt + '(') && !allGroupOpts.includes(s)) allGroupOpts.push(s);
-          });
-        }
+      // 根据年代过滤现代专属技能（如电子学、计算机使用在1920年代不可选）
+      let isModern = (state.era === '现代');
+      expandedOpts = expandedOpts.filter(opt => {
+        if (!isModern && MODERN_ONLY_SKILLS.includes(opt)) return false;
+        return true;
       });
-      let groupSelected = state.selectedOccSkills.filter(s => allGroupOpts.includes(s));
-      let isComplete = groupSelected.length >= group.count;
-      let isFull = groupSelected.length >= group.count;
+
+      // 计算该组已选技能数量（包括自定义技能）
+      let groupSelectedCount = getGroupSelectedCount(group, gIdx);
+      let isComplete = groupSelectedCount >= group.count;
+      let isFull = groupSelectedCount >= group.count;
 
       html += `
         <div class="occ-choice-group">
           <div class="choice-header">
             <span class="choice-label">${group.label}</span>
-            <span class="choice-count ${isComplete ? 'complete' : ''}">${groupSelected.length} / ${group.count}</span>
+            <span class="choice-count ${isComplete ? 'complete' : ''}">${groupSelectedCount} / ${group.count}</span>
           </div>
           <div class="occ-choice-options">
       `;
 
-      // 分离普通选项和 freeForm 父技能
+      // 分离三类选项：普通技能、freeForm 父技能、固定列表型父技能
       let normalOpts = [];
       let freeFormParents = [];
+      let fixedListParents = [];
       group.options.forEach(opt => {
-        if (isParentSkill(opt) && SPECIALTY_MAP[opt] && SPECIALTY_MAP[opt].freeForm) {
-          freeFormParents.push(opt);
+        if (isParentSkill(opt) && SPECIALTY_MAP[opt]) {
+          if (SPECIALTY_MAP[opt].freeForm) {
+            freeFormParents.push(opt);
+          } else {
+            fixedListParents.push(opt);
+          }
         } else {
-          // 非父技能直接加入
-          if (!isParentSkill(opt)) normalOpts.push(opt);
+          normalOpts.push(opt);
         }
       });
 
-      // 渲染普通选项（非 freeForm 父技能）
+      // 收集所有需要跳过的专精（由父技能展开而来，在各自区域单独渲染）
+      let skipOpts = new Set();
+      freeFormParents.forEach(p => {
+        getSpecialtyOptions(p).forEach(o => skipOpts.add(o));
+      });
+      fixedListParents.forEach(p => {
+        getSpecialtyOptions(p).forEach(o => skipOpts.add(o));
+      });
+
+      // 渲染普通选项（非父技能 + 在原始 options 中明确列出的子专精）
       expandedOpts.forEach(opt => {
-        // 跳过由 freeForm 父技能展开而来的预设专精（它们在 freeForm 区域单独渲染）
-        if (isSpecialtySkill(opt)) {
-          let parent = getParentFromSpecialty(opt);
-          if (parent && SPECIALTY_MAP[parent] && SPECIALTY_MAP[parent].freeForm) {
-            // 只有当该专精是从父技能展开来的（不在原始 group.options 中）才跳过
-            if (!group.options.includes(opt)) return;
-          }
-        }
+        // 跳过由父技能展开而来的专精（它们在各自的区域单独渲染）
+        if (skipOpts.has(opt) && !group.options.includes(opt)) return;
         let isSelected = state.selectedOccSkills.includes(opt);
         let isDisabled = !isSelected && isFull;
         html += `<button class="occ-choice-btn ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
           onclick="toggleOccSkillChoice('${opt}')">${opt}</button>`;
       });
 
-      // 渲染 freeForm 专攻区域（预设按钮 + 自定义输入）
-      freeFormParents.forEach(parentName => {
-        let presets = FREEFORM_PRESETS[parentName] || [];
-        let presetOpts = presets.map(s => `${parentName}(${s})`);
-        // 也收集玩家已自定义添加的专精（不在预设中的）
-        let customAdded = state.selectedOccSkills.filter(s => {
-          return s.startsWith(parentName + '(') && !presetOpts.includes(s);
+      // 渲染所有父技能的选择区域（统一使用 renderSpecialtySelector）
+      let allParentSkills = [...freeFormParents, ...fixedListParents];
+      allParentSkills.forEach(parentName => {
+        let map = SPECIALTY_MAP[parentName];
+        let isFreeForm = map && map.freeForm;
+        // 找到该父技能下已选中的专精
+        let chosenOpt = state.selectedOccSkills.find(s => s.startsWith(parentName + '(')) || null;
+        let inputId = `freeform_${gIdx}_${parentName}`;
+        let onAddExpr = `addFreeFormSkill(${gIdx},'${parentName}',document.getElementById('${inputId}').value)`;
+        // 收集已自定义添加的专精（不在预设中的，用于 freeForm 类型显示）
+        let extraOpts = undefined;
+        if (isFreeForm) {
+          let presetOpts = new Set(getSpecialtyOptions(parentName));
+          extraOpts = state.selectedOccSkills.filter(s => s.startsWith(parentName + '(') && !presetOpts.has(s));
+        }
+
+        html += renderSpecialtySelector({
+          parentName: parentName,
+          chosen: chosenOpt,
+          mode: 'choice',
+          isFull: isFull,
+          onSelect: `toggleOccSkillChoice({opt})`,
+          inputId: isFreeForm ? inputId : undefined,
+          onAdd: isFreeForm ? onAddExpr : undefined,
+          extraOpts: extraOpts,
         });
+      });
 
+      // 自定义技能输入（仅"任意X项"组显示，占用该组名额）
+      if (group.label.includes('任意')) {
+        // 收集该组已添加的自定义技能
+        let customSkillsInGroup = [];
+        if (state.customSkillGroups) {
+          for (let sk in state.customSkillGroups) {
+            if (state.customSkillGroups[sk] === gIdx && state.selectedOccSkills.includes(sk)) {
+              customSkillsInGroup.push(sk);
+            }
+          }
+        }
+        let customInputId = `customSkill_${gIdx}`;
         html += `
-          <div class="freeform-skill-group" style="margin-top:8px;padding:8px;background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;">
-            <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:6px;">
-              📝 ${parentName}（选择一项或自定义输入）
-            </div>
-            <div class="freeform-presets" style="display:flex;flex-wrap:wrap;gap:4px;">
+          <div class="occ-custom-section">
+            <div class="occ-custom-divider"></div>
+            <div class="occ-custom-label">✏️ 自定义技能</div>
         `;
-
-        // 渲染预设按钮
-        presetOpts.forEach(opt => {
-          let isSelected = state.selectedOccSkills.includes(opt);
-          let isDisabled = !isSelected && isFull;
-          let subName = getSubFromSpecialty(opt);
-          html += `<button class="occ-choice-btn ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
-            onclick="toggleOccSkillChoice('${opt}')" title="${parentName}(${subName})">${subName}</button>`;
-        });
-
-        html += `
-            </div>
-            <div class="freeform-custom" style="display:flex;gap:4px;align-items:center;margin-top:6px;">
-              <input type="text" id="freeform_${gIdx}_${parentName}" placeholder="自定义${parentName}名称…"
-                style="flex:1;padding:4px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text-primary);font-size:0.8rem;"
-                onkeydown="if(event.key==='Enter')addFreeFormSkill(${gIdx},'${parentName}',this.value)">
-              <button class="btn btn-secondary btn-sm" onclick="addFreeFormSkill(${gIdx},'${parentName}',document.getElementById('freeform_${gIdx}_${parentName}').value)">✚ 添加</button>
-            </div>
-        `;
-
-        // 渲染已自定义添加的专精标签
-        if (customAdded.length > 0) {
-          html += `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">`;
-          customAdded.forEach(s => {
-            let isDisabled = isFull && !state.selectedOccSkills.includes(s);
-            html += `<button class="occ-choice-btn selected ${isDisabled ? 'disabled' : ''}"
-              onclick="toggleOccSkillChoice('${s}')">${getSubFromSpecialty(s)} ✕</button>`;
+        // 渲染已添加的自定义技能标签（可删除）
+        if (customSkillsInGroup.length > 0) {
+          html += `<div class="occ-custom-tags">`;
+          customSkillsInGroup.forEach(sk => {
+            html += `<span class="occ-custom-tag">
+              ${sk}
+              <span class="occ-custom-tag-remove" onclick="removeCustomOccSkill(${gIdx},'${sk.replace(/'/g, "\\'")}')">✕</span>
+            </span>`;
           });
           html += `</div>`;
         }
-
-        html += `</div>`;
-      });
+        html += `
+            <div style="display:flex;gap:4px;align-items:center;margin-top:6px;">
+              <input type="text" id="${customInputId}" placeholder="输入自定义技能名称…"
+                style="flex:1;padding:4px 8px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:4px;color:var(--text-primary);font-size:0.8rem;"
+                onkeydown="if(event.key==='Enter')addCustomOccSkill(${gIdx})">
+              <button class="btn btn-secondary btn-sm" onclick="addCustomOccSkill(${gIdx})">✚ 添加</button>
+            </div>
+          </div>
+        `;
+      }
 
       html += `
           </div>
@@ -483,7 +715,6 @@ function renderStep4(container) {
     html += `
           </div>
         </div>
-      </div>
     `;
   }
 
@@ -510,8 +741,10 @@ function selectOccupation(idx) {
       state.skillPoints[name] = { occ: 0, int: 0 };
     });
   });
-  // 也初始化常规技能
+  // 也初始化常规技能（根据年代过滤现代专属技能）
+  let isModern = (state.era === '现代');
   Object.keys(SKILLS_DATA.regular).forEach(name => {
+    if (!isModern && MODERN_ONLY_SKILLS.includes(name)) return;
     state.skillPoints[name] = { occ: 0, int: 0 };
   });
   // 信用评级：将第4步设置的值同步到 skillPoints
@@ -581,4 +814,257 @@ function addFreeFormSkill(groupIdx, parentName, value) {
   // 清空输入框
   let input = document.getElementById('freeform_' + groupIdx + '_' + parentName);
   if (input) input.value = '';
+}
+
+// 添加自定义职业技能（占用对应 choiceGroup 的名额）
+function addCustomOccSkill(groupIdx) {
+  let input = document.getElementById('customSkill_' + groupIdx);
+  let value = (input ? input.value : '').trim();
+  if (!value) {
+    notify('请输入技能名称', 'error');
+    return;
+  }
+  // 年代校验：1920年代不允许添加现代专属技能
+  if (state.era !== '现代' && MODERN_ONLY_SKILLS.includes(value)) {
+    notify('当前年代不可选择该技能', 'error');
+    return;
+  }
+  if (state.selectedOccSkills.includes(value)) {
+    notify('该技能已选择', 'error');
+    return;
+  }
+  // 检查该组名额是否已满（包括已添加的自定义技能）
+  let occ = OCCUPATIONS.find(o => o.name === state.occupation.name) || state.occupation;
+  if (!occ.choiceGroups || !occ.choiceGroups[groupIdx]) return;
+  let group = occ.choiceGroups[groupIdx];
+  let groupSelected = getGroupSelectedCount(group, groupIdx);
+  if (groupSelected >= group.count) {
+    notify('该组技能名额已满（' + group.count + '项）', 'error');
+    return;
+  }
+  state.selectedOccSkills.push(value);
+  // 记录该自定义技能属于哪个 group
+  if (!state.customSkillGroups) state.customSkillGroups = {};
+  state.customSkillGroups[value] = groupIdx;
+  saveState();
+  renderStep();
+  notify('已添加自定义技能：' + value, 'success');
+}
+
+// 移除已添加的自定义职业技能
+function removeCustomOccSkill(groupIdx, skillName) {
+  let idx = state.selectedOccSkills.indexOf(skillName);
+  if (idx < 0) return;
+  state.selectedOccSkills.splice(idx, 1);
+  // 清理 customSkillGroups 记录
+  if (state.customSkillGroups && state.customSkillGroups[skillName] !== undefined) {
+    delete state.customSkillGroups[skillName];
+  }
+  saveState();
+  renderStep();
+  notify('已移除自定义技能：' + skillName, 'info');
+}
+
+// ============================================================
+// 自定义职业 - Custom Occupation
+// ============================================================
+
+// 获取当前年代可用的所有技能列表（用于自定义职业技能选择）
+function getCustomOccAvailableSkills() {
+  let isModern = (state.era === '现代');
+  let skills = [];
+
+  // 常规技能
+  for (let k in SKILLS_DATA.regular) {
+    if (!isModern && MODERN_ONLY_SKILLS.includes(k)) continue;
+    skills.push(k);
+  }
+  // 所有父技能（固定列表型和 freeForm 型）都只返回父技能名，由 renderSpecialtySelector 单独渲染
+  for (let p in SPECIALTY_MAP) {
+    skills.push(p);
+  }
+
+  return skills;
+}
+
+// 切换自定义职业技能选择
+function toggleCustomOccSkill(skillName) {
+  let selected = state.customOccForm.selectedSkills;
+  let idx = selected.indexOf(skillName);
+  if (idx >= 0) {
+    selected.splice(idx, 1);
+  } else {
+    // 如果是父技能的专精，先移除同一父技能下已选的旧专精（同族互斥）
+    for (let p in SPECIALTY_MAP) {
+      if (skillName.startsWith(p + '(')) {
+        selected = selected.filter(s => !s.startsWith(p + '('));
+        state.customOccForm.selectedSkills = selected;
+        break;
+      }
+    }
+    if (selected.length >= 8) {
+      notify('最多选择 8 项技能（信用评级自动包含，共 9 项）', 'error');
+      return;
+    }
+    selected.push(skillName);
+  }
+  saveState();
+  renderStep();
+}
+
+// 自定义职业中添加自由输入型专精（如"语言(俄语)"、"操纵(飞艇)"）
+function addCustomOccFreeForm(parentName, subName) {
+  subName = (subName || '').trim();
+  if (!subName) {
+    notify('请输入专精名称', 'error');
+    return;
+  }
+  let fullName = parentName + '(' + subName + ')';
+  let selected = state.customOccForm.selectedSkills;
+  // 移除同一父技能下已选的旧专精
+  selected = selected.filter(s => !s.startsWith(parentName + '('));
+  state.customOccForm.selectedSkills = selected;
+  if (selected.length >= 8) {
+    notify('最多选择 8 项技能（信用评级自动包含，共 9 项）', 'error');
+    return;
+  }
+  selected.push(fullName);
+  saveState();
+  renderStep();
+  notify('已添加：' + fullName, 'success');
+}
+
+// 自定义职业中添加完全自定义的技能（非父技能专精）
+function addCustomOccSkillItem() {
+  let input = document.getElementById('customOcc_skillInput');
+  let value = (input ? input.value : '').trim();
+  if (!value) {
+    notify('请输入技能名称', 'error');
+    return;
+  }
+  let marker = '__custom__:' + value;
+  let selected = state.customOccForm.selectedSkills;
+  if (selected.includes(marker)) {
+    notify('该技能已添加', 'error');
+    return;
+  }
+  if (selected.length >= 8) {
+    notify('最多选择 8 项技能（信用评级自动包含，共 9 项）', 'error');
+    return;
+  }
+  selected.push(marker);
+  saveState();
+  renderStep();
+  notify('已添加自定义技能：' + value, 'success');
+}
+
+// 自定义职业中移除自定义技能
+function removeCustomOccSkillItem(displayName) {
+  let marker = '__custom__:' + displayName;
+  let selected = state.customOccForm.selectedSkills;
+  let idx = selected.indexOf(marker);
+  if (idx < 0) return;
+  selected.splice(idx, 1);
+  saveState();
+  renderStep();
+  notify('已移除自定义技能：' + displayName, 'info');
+}
+
+// 确认创建自定义职业
+function confirmCustomOccupation() {
+  let form = state.customOccForm;
+  let name = form.name.trim();
+  if (!name) {
+    notify('请输入职业名称', 'error');
+    return;
+  }
+  if (form.selectedSkills.length === 0) {
+    notify('请至少选择 1 项技能', 'error');
+    return;
+  }
+  let crMin = parseInt(form.creditRatingMin) || 0;
+  let crMax = parseInt(form.creditRatingMax) || 99;
+  if (crMin < 0) crMin = 0;
+  if (crMax > 99) crMax = 99;
+  if (crMin > crMax) { let t = crMin; crMin = crMax; crMax = t; }
+
+  // 构造虚拟职业对象（与 OCCUPATIONS 格式兼容）
+  // 将 __custom__: 前缀还原为真实技能名
+  let cleanSkills = form.selectedSkills.map(s => {
+    if (s.startsWith('__custom__:')) return s.slice(10);
+    return s;
+  });
+  let userPts = parseInt(form.occupationalPoints) || 0;
+  if (userPts < 0) userPts = 0;
+  let customOcc = {
+    name: name,
+    eras: [state.era],
+    lovecraft: false,
+    custom: true,
+    creditRating: [crMin, crMax],
+    skillPoints: userPts + ' 点',
+    getPoints: () => userPts,
+    fixedSkills: ['信用评级'],
+    choiceGroups: [{
+      label: '自选技能（任意 ' + cleanSkills.length + ' 项）',
+      count: cleanSkills.length,
+      options: [...cleanSkills]
+    }]
+  };
+
+  // 选择该职业
+  state.occupation = customOcc;
+  state.selectedOccSkills = [...cleanSkills];
+  state.fixedSpecialtyChoices = {};
+  state.customSkillGroups = {};
+
+  // 初始化技能点
+  let attrs = getEffectiveAttrs();
+  state.occupationalPoints = userPts;
+  state.interestPoints = attrs.INT * 2;
+  state.occupationalUsed = 0;
+  state.interestUsed = 0;
+  state.creditRating = crMin;
+
+  state.skillPoints = {};
+  getDisplaySkillCategories().forEach(cat => {
+    cat.skills.forEach(name => {
+      state.skillPoints[name] = { occ: 0, int: 0 };
+    });
+  });
+  let isModern = (state.era === '现代');
+  Object.keys(SKILLS_DATA.regular).forEach(name => {
+    if (!isModern && MODERN_ONLY_SKILLS.includes(name)) return;
+    state.skillPoints[name] = { occ: 0, int: 0 };
+  });
+  state.skillPoints['信用评级'].occ = state.creditRating;
+  state.occupationalUsed = state.creditRating;
+
+  saveState();
+  renderStep();
+  notify('已创建自定义职业：' + name, 'success');
+}
+
+// 取消自定义职业编辑
+function cancelCustomOccupation() {
+  state.customOccForm = { name: '', creditRatingMin: 0, creditRatingMax: 99, occupationalPoints: 0, selectedSkills: [] };
+  saveState();
+  renderStep();
+}
+
+// 重置当前职业选择，进入自定义职业编辑模式
+function resetToCustomOccupation() {
+  state.occupation = null;
+  state.creditRating = 0;
+  state.selectedOccSkills = [];
+  state.fixedSpecialtyChoices = {};
+  state.customSkillGroups = {};
+  state.occupationalPoints = 0;
+  state.interestPoints = 0;
+  state.occupationalUsed = 0;
+  state.interestUsed = 0;
+  state.skillPoints = {};
+  state.customOccForm = { name: '', creditRatingMin: 0, creditRatingMax: 99, occupationalPoints: 0, selectedSkills: [] };
+  saveState();
+  renderStep();
 }

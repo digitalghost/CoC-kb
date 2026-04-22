@@ -15,5 +15,6 @@ function renderStep() {
     case 5: renderStep6(container); break;
     case 6: renderStep7(container); break;
     case 7: renderStep8(container); break;
+    case 8: renderStep9(container); break;
   }
 }

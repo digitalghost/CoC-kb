@@ -100,12 +100,15 @@ function getSkillBase(skillName, attrs) {
     let sub = getSubFromSpecialty(skillName);
     let map = SPECIALTY_MAP[parent];
     if (map && map.category && SKILLS_DATA[map.category]) {
-      return SKILLS_DATA[map.category][sub] || 0;
+      let val = SKILLS_DATA[map.category][sub];
+      if (val !== undefined) return val;
+      // 子技能不在预设列表中（自定义输入），走 freeForm 默认值逻辑
     }
-    // 自由输入型专精（如 "语言(法语)"、"生存(沙漠)"、"操纵(飞行器)"）
+    // 自由输入型专精（如 "语言(法语)"、"生存(沙漠)"、"艺术和手艺(捏泥人)"）
     if (map && map.freeForm) {
-      // 生存专精基础值为 10%（wiki 规则），其余自由输入型为 1%
+      // 生存专精基础值为 10%，艺术和手艺专精基础值为 5%，其余自由输入型为 1%
       if (parent === '生存') return 10;
+      if (parent === '艺术和手艺') return 5;
       return 1;
     }
     return 0;
@@ -152,15 +155,87 @@ function getAllSkillNames() {
 
 // 获取用于显示的技能分类列表（用于第5步和第8步的渲染）
 // 返回格式: [{ title, skills: ['格斗(斧)', '格斗(斗殴)', ...] }, ...]
+// 根据当前年代过滤掉不可用的技能
 function getDisplaySkillCategories() {
-  return [
-    { title: '常规技能', skills: Object.keys(SKILLS_DATA.regular) },
-    { title: '格斗专攻', skills: Object.keys(SKILLS_DATA.combat).map(s => '格斗(' + s + ')') },
-    { title: '射击专攻', skills: Object.keys(SKILLS_DATA.firearms).map(s => '射击(' + s + ')') },
-    { title: '科学专攻', skills: Object.keys(SKILLS_DATA.science).map(s => '科学(' + s + ')') },
-    { title: '艺术和手艺专攻', skills: Object.keys(SKILLS_DATA.artCraft).map(s => '艺术和手艺(' + s + ')') }
-    // 语言、生存、操纵 为 freeForm 类型，不在此显示固定列表，由动态添加
+  let isModern = state.era === '现代';
+  let filterSkill = (name) => {
+    // 1920年代过滤掉现代专属技能
+    if (!isModern && MODERN_ONLY_SKILLS.includes(name)) return false;
+    return true;
+  };
+
+  // 收集玩家已选/已投入的自由输入型专精（按父技能分组）
+  let customByParent = {}; // { '语言': ['语言(法语)', '语言(拉丁语)'], ... }
+  if (state.occupation) {
+    let allSelected = getSelectedOccupationalSkills();
+    allSelected.forEach(s => {
+      if (isSpecialtySkill(s)) {
+        let parent = getParentFromSpecialty(s);
+        if (parent && SPECIALTY_MAP[parent] && SPECIALTY_MAP[parent].freeForm) {
+          if (!customByParent[parent]) customByParent[parent] = [];
+          if (!customByParent[parent].includes(s)) customByParent[parent].push(s);
+        }
+      }
+    });
+    for (let sk in state.skillPoints) {
+      let pts = state.skillPoints[sk];
+      if ((pts.occ > 0 || pts.int > 0) && isSpecialtySkill(sk)) {
+        let parent = getParentFromSpecialty(sk);
+        if (parent && SPECIALTY_MAP[parent] && SPECIALTY_MAP[parent].freeForm) {
+          if (!customByParent[parent]) customByParent[parent] = [];
+          if (!customByParent[parent].includes(sk)) customByParent[parent].push(sk);
+        }
+      }
+    }
+  }
+
+  // 合并预设 + 自定义，生成各 freeForm 父技能的分类
+  function buildFreeFormCategory(title, parentName) {
+    let presets = (FREEFORM_PRESETS[parentName] || []).map(s => `${parentName}(${s})`);
+    let customs = customByParent[parentName] || [];
+    let all = [];
+    let existing = new Set();
+    presets.forEach(s => { if (!existing.has(s)) { all.push(s); existing.add(s); } });
+    customs.forEach(s => { if (!existing.has(s)) { all.push(s); existing.add(s); } });
+    return { title, skills: all.filter(filterSkill) };
+  }
+
+  // 收集所有标准技能名（用于识别自定义技能）
+  let standardSkills = new Set();
+  let standardCats = [
+    { title: '常规技能', skills: Object.keys(SKILLS_DATA.regular).filter(filterSkill) },
+    { title: '格斗专攻', skills: Object.keys(SKILLS_DATA.combat).map(s => '格斗(' + s + ')').filter(filterSkill) },
+    { title: '射击专攻', skills: Object.keys(SKILLS_DATA.firearms).map(s => '射击(' + s + ')').filter(filterSkill) },
+    { title: '科学专攻', skills: Object.keys(SKILLS_DATA.science).map(s => '科学(' + s + ')').filter(filterSkill) },
+    buildFreeFormCategory('艺术和手艺专攻', '艺术和手艺'),
+    buildFreeFormCategory('语言专攻', '语言'),
+    buildFreeFormCategory('生存专攻', '生存'),
+    buildFreeFormCategory('操纵专攻', '操纵'),
+    buildFreeFormCategory('学识专攻', '学识'),
   ];
+  standardCats.forEach(cat => cat.skills.forEach(s => standardSkills.add(s)));
+
+  // 收集自定义技能（在 selectedOccSkills 或 skillPoints 中但不在标准分类中的）
+  let customSkills = [];
+  if (state.occupation) {
+    let seen = new Set();
+    let allSelected = getSelectedOccupationalSkills();
+    allSelected.forEach(s => {
+      if (!standardSkills.has(s) && !seen.has(s)) { customSkills.push(s); seen.add(s); }
+    });
+    for (let sk in state.skillPoints) {
+      let pts = state.skillPoints[sk];
+      if ((pts.occ > 0 || pts.int > 0) && !standardSkills.has(sk) && !seen.has(sk)) {
+        customSkills.push(sk); seen.add(sk);
+      }
+    }
+  }
+
+  let result = [...standardCats];
+  if (customSkills.length > 0) {
+    result.push({ title: '自定义技能', skills: customSkills });
+  }
+  return result;
 }
 
 // ============================================================
@@ -169,16 +244,43 @@ function getDisplaySkillCategories() {
 
 function getSelectedOccupationalSkills() {
   if (!state.occupation) return [];
+  // 从 OCCUPATIONS 数组中重新查找职业对象（localStorage 序列化会丢失函数）
+  let occObj = OCCUPATIONS.find(o => o.name === state.occupation.name) || state.occupation;
   let result = [];
-  state.occupation.fixedSkills.forEach(s => {
+  occObj.fixedSkills.forEach(s => {
     if (isParentSkill(s) && state.fixedSpecialtyChoices[s]) {
-      // 父技能已被选择为具体专精
+      // 纯父技能已被选择为具体专精
       result.push(state.fixedSpecialtyChoices[s]);
+    } else if (isParentSkill(s)) {
+      // 纯父技能尚未选择 → 跳过
     } else {
+      // 普通技能或已指定子类型（如 "科学(工程学)"、"艺术和手艺(工程制图)"）→ 直接使用
       result.push(s);
     }
   });
   return [...result, ...state.selectedOccSkills];
+}
+
+// 计算某个 choiceGroup 中已选技能的数量（包括自定义技能）
+function getGroupSelectedCount(group, groupIdx) {
+  let expandedOpts = expandSkillOptions(group.options);
+  // 也包含所有父技能的已选专精
+  group.options.forEach(opt => {
+    if (isParentSkill(opt) && SPECIALTY_MAP[opt]) {
+      state.selectedOccSkills.forEach(s => {
+        if (s.startsWith(opt + '(')) expandedOpts.push(s);
+      });
+    }
+  });
+  // 也包含该组中通过自定义输入添加的技能（需匹配 groupIdx）
+  if (state.customSkillGroups && groupIdx !== undefined) {
+    for (let skill in state.customSkillGroups) {
+      if (state.customSkillGroups[skill] === groupIdx && state.selectedOccSkills.includes(skill)) {
+        expandedOpts.push(skill);
+      }
+    }
+  }
+  return state.selectedOccSkills.filter(s => expandedOpts.includes(s)).length;
 }
 
 // 将技能选项列表中的父技能展开为专精选项
@@ -191,7 +293,7 @@ function expandSkillOptions(options) {
       if (specialtyOpts.length > 0) {
         expanded = expanded.concat(specialtyOpts);
       }
-      // freeForm 类型的父技能（如"语言"、"生存"、"操纵"）不在此展开，由 UI 动态处理
+      // freeForm 类型的父技能（如"语言"、"生存"）不在此展开，由 UI 动态处理
     } else {
       expanded.push(opt);
     }
@@ -201,6 +303,8 @@ function expandSkillOptions(options) {
 
 function toggleOccSkillChoice(skillName) {
   if (!state.occupation) return;
+  // 年代校验：1920年代不允许选择现代专属技能
+  if (state.era !== '现代' && MODERN_ONLY_SKILLS.includes(skillName)) return;
   let occ = state.occupation;
   let idx = state.selectedOccSkills.indexOf(skillName);
   if (idx >= 0) {
@@ -209,42 +313,38 @@ function toggleOccSkillChoice(skillName) {
   } else {
     // Select - find which choiceGroup this skill belongs to
     let foundGroup = null;
-    for (let group of occ.choiceGroups) {
+    let foundGroupIdx = -1;
+    for (let i = 0; i < occ.choiceGroups.length; i++) {
+      let group = occ.choiceGroups[i];
       // 展开后的选项中查找
       let expandedOpts = expandSkillOptions(group.options);
       if (expandedOpts.includes(skillName)) {
         foundGroup = group;
+        foundGroupIdx = i;
         break;
       }
       // 也检查原始选项（兼容非父技能）
       if (group.options.includes(skillName)) {
         foundGroup = group;
+        foundGroupIdx = i;
         break;
       }
-      // 自由输入型专精（如 "语言(法语)"）→ 检查父技能是否在 options 中
+      // 专精技能（如 "格斗(斗殴)"）→ 检查父技能是否在 options 中
       if (isSpecialtySkill(skillName)) {
         let parent = getParentFromSpecialty(skillName);
-        if (parent && SPECIALTY_MAP[parent] && SPECIALTY_MAP[parent].freeForm) {
+        if (parent && SPECIALTY_MAP[parent]) {
           if (group.options.includes(parent)) {
             foundGroup = group;
+            foundGroupIdx = i;
             break;
           }
         }
       }
     }
     if (!foundGroup) return;
-    // Count how many from this group are already selected
-    let expandedOpts = expandSkillOptions(foundGroup.options);
-    // 也包含自由输入型专精
-    foundGroup.options.forEach(opt => {
-      if (isParentSkill(opt) && SPECIALTY_MAP[opt] && SPECIALTY_MAP[opt].freeForm) {
-        state.selectedOccSkills.forEach(s => {
-          if (s.startsWith(opt + '(')) expandedOpts.push(s);
-        });
-      }
-    });
-    let groupSelected = state.selectedOccSkills.filter(s => expandedOpts.includes(s));
-    if (groupSelected.length >= foundGroup.count) return; // Already at max
+    // Count how many from this group are already selected (including custom skills)
+    let groupSelected = getGroupSelectedCount(foundGroup, foundGroupIdx);
+    if (groupSelected >= foundGroup.count) return; // Already at max
     state.selectedOccSkills.push(skillName);
   }
   saveState();
@@ -303,12 +403,6 @@ function isOccupationalSkill(skillName) {
       let inner = s.match(/\((.+)\)/);
       if (inner) {
         return skillName === '语言' || skillName === s || skillName === inner[1];
-      }
-    }
-    if (s.startsWith('操纵(')) {
-      let inner = s.match(/\((.+)\)/);
-      if (inner) {
-        return skillName === '操纵' || skillName === s || skillName === inner[1];
       }
     }
     if (s.startsWith('修理(')) {

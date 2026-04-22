@@ -24,6 +24,8 @@ let state = {
   creditRating: 0,
   selectedOccSkills: [],  // Step 4 - skill selection from choiceGroups
   fixedSpecialtyChoices: {},  // Step 4 - { parentName: 'chosenSpecialty' } 固定技能中父技能的专精选择
+  customSkillGroups: {},  // Step 4 - { skillName: groupIdx } 自定义技能所属组记录
+  customOccForm: { name: '', creditRatingMin: 0, creditRatingMax: 99, occupationalPoints: 0, selectedSkills: [] },
   // Step 5
   occupationalPoints: 0,
   interestPoints: 0,
@@ -35,6 +37,9 @@ let state = {
   // Step 7
   background: [],  // 每项: { category: '形象描述', content: '...', isKey: false }
   keyConnection: -1,  // 关键连接的索引
+  // Step 8
+  equipment: [],  // 随身物品列表，每项: { name, type, price, detail }
+  spendingCash: 0,  // 可支配现金
   // Final
   completed: false
 };

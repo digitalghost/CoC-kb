@@ -30,19 +30,23 @@ function nextStep() {
     return;
   }
   if (state.currentStep === 3 && state.occupation) {
+    // 从 OCCUPATIONS 数组中重新查找职业对象（localStorage 序列化会丢失函数）
+    let occObj = OCCUPATIONS.find(o => o.name === state.occupation.name) || state.occupation;
+
+    // Check all fixedSkills pure parent skills have specialty selected
+    for (let s of occObj.fixedSkills) {
+      if (isParentSkill(s) && !state.fixedSpecialtyChoices[s]) {
+        notify('请完成所有固定技能的专攻选择', 'error');
+        return;
+      }
+    }
+
     // Check all choice groups are satisfied
     let allComplete = true;
-    for (let group of state.occupation.choiceGroups) {
-      let expandedOpts = expandSkillOptions(group.options);
-      // Also include any freeform skills that start with parent name
-      let freeFormOpts = group.options.filter(opt => isParentSkill(opt) && SPECIALTY_MAP[opt] && SPECIALTY_MAP[opt].freeForm);
-      freeFormOpts.forEach(parent => {
-        state.selectedOccSkills.forEach(s => {
-          if (s.startsWith(parent + '(')) expandedOpts.push(s);
-        });
-      });
-      let groupSelected = state.selectedOccSkills.filter(s => expandedOpts.includes(s));
-      if (groupSelected.length < group.count) {
+    for (let i = 0; i < occObj.choiceGroups.length; i++) {
+      let group = occObj.choiceGroups[i];
+      let groupSelected = getGroupSelectedCount(group, i);
+      if (groupSelected < group.count) {
         allComplete = false;
         break;
       }
@@ -61,7 +65,7 @@ function nextStep() {
     }
   }
 
-  if (state.currentStep < 7) {
+  if (state.currentStep < 8) {
     state.currentStep++;
     saveState();
     renderStep();
@@ -104,6 +108,8 @@ function resetAll() {
       derived: { HP: 0, MP: 0, SAN: 0, DB: '0', build: 0, MOV: 9, dodge: 0, language: 0 },
       background: [],
       keyConnection: -1,
+      equipment: [],
+      spendingCash: 0,
       completed: false
     };
     renderStep();
@@ -166,6 +172,21 @@ function exportCharacter() {
         text += `${prefix}[${item.category}] ${item.content}\n`;
       }
     });
+  }
+
+  // Equipment
+  if (state.equipment.length > 0) {
+    let totalSpent = getEquipmentTotalSpent();
+    let crInfo = getCreditRatingInfo(state.creditRating);
+    text += `\n--- 随身物品 ---\n`;
+    text += `信用评级: ${state.creditRating} (${crInfo.level}) | 资产: ${crInfo.assets}\n`;
+    state.equipment.forEach(item => {
+      text += `- ${item.name}`;
+      if (item.type && item.type !== '自定义') text += ` [${item.type}]`;
+      if (item.price > 0) text += ` ($${item.price.toFixed(2)})`;
+      text += `\n`;
+    });
+    text += `可支配现金: $${(state.spendingCash - totalSpent).toFixed(2)} (已花费 $${totalSpent.toFixed(2)} / $${state.spendingCash.toFixed(2)})\n`;
   }
 
   // Create download

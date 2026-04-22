@@ -1,4 +1,4 @@
-// 步骤5-8渲染 - Steps 5-8 Rendering
+// 步骤5-9渲染 - Steps 5-9 Rendering
 // 包含函数:
 //   - renderStep5(container)        步骤5：技能点分配（职业/兴趣技能点）
 //   - updateSkillPoint(name, type, val)  更新技能点分配
@@ -10,7 +10,12 @@
 //   - randomizeBackgroundItem(idx)  重新随机生成某个条目
 //   - setKeyConnection(idx)         设置/取消关键连接
 //   - updateBackgroundContent(idx, content) 更新背景条目内容
-//   - renderStep8(container)        步骤8：最终角色卡（可编辑的综合视图）
+//   - renderStep8(container)        步骤8：决定装备（信用评级现金、物品搜索、花费追踪）
+//   - addEquipment(name, price, type)  添加物品
+//   - removeEquipment(idx)          移除物品
+//   - renderEquipmentSuggestions(query) 渲染搜索建议
+//   - getCreditRatingInfo()         根据信用评级获取现金和资产信息
+//   - renderStep9(container)        步骤9：最终角色卡（可编辑的综合视图）
 //   - updateFinalSkill(name, val)   编辑最终技能值
 //   - recalcAndRender()             重新计算并渲染
 
@@ -45,32 +50,8 @@ function renderStep5(container) {
       </div>
   `;
 
-  // Render skill categories - 使用专精展开格式
+  // Render skill categories - 使用专精展开格式（已包含自由输入型专精）
   const categories = getDisplaySkillCategories();
-
-  // 收集已选的自由输入型专精技能（如"语言(法语)"、"生存(沙漠)"、"操纵(飞行器)"）
-  let freeFormSkills = [];
-  if (state.occupation) {
-    let allSelected = getSelectedOccupationalSkills();
-    allSelected.forEach(s => {
-      if (isSpecialtySkill(s)) {
-        let parent = getParentFromSpecialty(s);
-        if (parent && SPECIALTY_MAP[parent] && SPECIALTY_MAP[parent].freeForm) {
-          freeFormSkills.push(s);
-        }
-      }
-    });
-    // 也检查 skillPoints 中有投入的自由输入型专精
-    for (let sk in state.skillPoints) {
-      let pts = state.skillPoints[sk];
-      if ((pts.occ > 0 || pts.int > 0) && isSpecialtySkill(sk)) {
-        let parent = getParentFromSpecialty(sk);
-        if (parent && SPECIALTY_MAP[parent] && SPECIALTY_MAP[parent].freeForm && !freeFormSkills.includes(sk)) {
-          freeFormSkills.push(sk);
-        }
-      }
-    }
-  }
 
   categories.forEach(cat => {
     html += `<div class="skill-category">
@@ -86,42 +67,20 @@ function renderStep5(container) {
       let pts = state.skillPoints[name] || { occ: 0, int: 0 };
       let total = base + pts.occ + pts.int;
       let occTag = isOcc ? '<span class="tag-occ">职</span>' : '';
+      // 非职业技能的职业点滑块禁用（wiki 规则：本职技能点只能投入职业技能）
+      let occSlider = isOcc
+        ? makeSkillSlider(name, 'occ', pts.occ, base)
+        : `<span class="slider-disabled">—</span>`;
       html += `<tr data-skill="${name}">
         <td class="skill-name">${name} ${occTag}</td>
         <td class="skill-base">${base}</td>
-        <td>${makeSkillSlider(name,'occ',pts.occ,base)}</td>
+        <td>${occSlider}</td>
         <td>${makeSkillSlider(name,'int',pts.int,base)}</td>
         <td class="skill-total">${total}</td>
       </tr>`;
     });
     html += `</table></div>`;
   });
-
-  // 渲染自由输入型专精技能区域
-  if (freeFormSkills.length > 0) {
-    html += `<div class="skill-category">
-      <div class="skill-category-title" onclick="this.nextElementSibling.classList.toggle('hidden')">
-        自定义专精技能 <span class="toggle">&#9660;</span>
-      </div>
-      <table class="skill-table">
-        <tr><th>技能</th><th>基础值</th><th>职业点</th><th>兴趣点</th><th>总计</th></tr>
-    `;
-    freeFormSkills.forEach(name => {
-      let base = getSkillBase(name, attrs);
-      let isOcc = isOccupationalSkill(name);
-      let pts = state.skillPoints[name] || { occ: 0, int: 0 };
-      let total = base + pts.occ + pts.int;
-      let occTag = isOcc ? '<span class="tag-occ">职</span>' : '';
-      html += `<tr data-skill="${name}">
-        <td class="skill-name">${name} ${occTag}</td>
-        <td class="skill-base">${base}</td>
-        <td>${makeSkillSlider(name,'occ',pts.occ,base)}</td>
-        <td>${makeSkillSlider(name,'int',pts.int,base)}</td>
-        <td class="skill-total">${total}</td>
-      </tr>`;
-    });
-    html += `</table></div>`;
-  }
 
   html += `</div>`;
   container.innerHTML = html;
@@ -132,14 +91,39 @@ function makeSkillSlider(skillName, type, value, base) {
   let color = type === 'occ' ? 'var(--gold)' : 'var(--cyan)';
   return `<div class="skill-slider" data-skill="${skillName}" data-type="${type}" data-base="${base}"
     style="--slider-color:${color}">
-    <span class="slider-btn slider-dec" 
-      onmousedown="sliderHoldStart(event,-1)" 
+    <span class="slider-btn slider-dec"
+      onmousedown="sliderHoldStart(event,-1)"
       ontouchstart="sliderHoldStart(event,-1)">−</span>
-    <span class="slider-val">${value}</span>
-    <span class="slider-btn slider-inc" 
-      onmousedown="sliderHoldStart(event,1)" 
+    <input class="slider-val" type="text" inputmode="numeric" value="${value}"
+      onfocus="this.select()"
+      onblur="sliderInputCommit(this)"
+      onkeydown="if(event.key==='Enter'){this.blur();event.preventDefault();}">
+    <span class="slider-btn slider-inc"
+      onmousedown="sliderHoldStart(event,1)"
       ontouchstart="sliderHoldStart(event,1)">+</span>
   </div>`;
+}
+
+// 用户直接输入数字后提交
+function sliderInputCommit(inputEl) {
+  let sliderEl = inputEl.closest('.skill-slider');
+  if (!sliderEl) return;
+  let skillName = sliderEl.dataset.skill;
+  let type = sliderEl.dataset.type;
+  let raw = inputEl.value.replace(/[^0-9]/g, '');
+  let val = parseInt(raw) || 0;
+  // 还原为合法值后更新
+  updateSkillPoint(skillName, type, val);
+  // 同步显示
+  inputEl.value = state.skillPoints[skillName][type];
+  // 更新该行总计
+  let row = sliderEl.closest('tr');
+  if (row) {
+    let base = parseInt(sliderEl.dataset.base) || 0;
+    let totalEl = row.querySelector('.skill-total');
+    if (totalEl) totalEl.textContent = base + state.skillPoints[skillName].occ + state.skillPoints[skillName].int;
+  }
+  updatePointsDisplay();
 }
 
 // ===== 按住持续增减交互 =====
@@ -174,6 +158,8 @@ function sliderApply(el, delta) {
   let skillName = el.dataset.skill;
   let type = el.dataset.type;
   let base = parseInt(el.dataset.base) || 0;
+  // 本职技能点只能投入到职业技能（wiki 规则）
+  if (type === 'occ' && !isOccupationalSkill(skillName)) return;
   if (!state.skillPoints[skillName]) state.skillPoints[skillName] = { occ: 0, int: 0 };
   let oldVal = state.skillPoints[skillName][type];
   let otherType = type === 'occ' ? 'int' : 'occ';
@@ -200,7 +186,7 @@ function sliderApply(el, delta) {
   saveState();
   // 局部更新 UI（不重新渲染整个页面）
   let valEl = el.querySelector('.slider-val');
-  if (valEl) valEl.textContent = newVal;
+  if (valEl) valEl.value = newVal;
   // 更新该行的总计
   let row = el.closest('tr');
   if (row) {
@@ -228,6 +214,8 @@ function updatePointsDisplay() {
 }
 
 function updateSkillPoint(name, type, val) {
+  // 本职技能点只能投入到职业技能（wiki 规则）
+  if (type === 'occ' && !isOccupationalSkill(name)) return;
   let v = parseInt(val) || 0;
   if (!state.skillPoints[name]) state.skillPoints[name] = { occ: 0, int: 0 };
   let base = getSkillBase(name, getEffectiveAttrs());
@@ -351,21 +339,25 @@ function pickN(arr, n) {
   return shuffled.slice(0, n);
 }
 
-// 辅助函数：生成随机人名（复用 steps-1to4.js 中的名字库）
+// 辅助函数：生成随机人名（1920年代新英格兰风格，中文音译）
 function generateRandomPersonName() {
-  const surnames = [
-    '陈', '林', '张', '王', '李', '赵', '黄', '周', '吴', '徐',
-    '孙', '胡', '朱', '高', '何', '郭', '马', '罗', '梁', '宋',
-    '郑', '谢', '韩', '唐', '冯', '于', '董', '萧', '程', '曹',
-    '袁', '邓', '许', '傅', '沈', '曾', '彭', '吕', '苏', '卢'
+  const firstNames = [
+    '亨利', '查尔斯', '爱德华', '乔治', '詹姆斯', '威廉', '罗伯特', '托马斯',
+    '亚瑟', '弗朗西斯', '阿尔伯特', '弗雷德里克', '赫伯特', '沃尔特', '哈罗德', '塞缪尔',
+    '霍华德', '理查德', '欧内斯特', '雷蒙德', '拉尔夫', '埃德温', '克拉伦斯', '珀西',
+    '阿格尼丝', '爱丽丝', '克拉拉', '多萝西', '埃莉诺', '伊丽莎白', '弗洛伦丝', '格蕾丝',
+    '海伦', '艾琳', '玛格丽特', '玛莎', '米尔德丽德', '罗丝', '露丝', '维奥莱特',
+    '凯瑟琳', '莉莲', '伊迪丝', '碧翠丝', '康斯坦丝', '哈丽雅特', '约瑟芬'
   ];
-  const givenNames = [
-    '怀安', '志远', '明德', '书恒', '承志', '天佑', '文彬', '景行',
-    '逸尘', '子轩', '浩然', '思源', '一鸣', '鹏飞', '国栋', '家骏',
-    '雅琴', '淑芬', '慧兰', '婉清', '静怡', '雪梅', '玉珍', '秀英',
-    '若兰', '梦瑶', '心怡', '紫萱', '语嫣', '诗涵', '晓彤', '佳慧'
+  const lastNames = [
+    '哈特韦尔', '布莱克伍德', '马洛', '惠特莫尔', '卡特', '辛克莱', '阿什沃思',
+    '温斯洛', '哈格罗夫', '斯特林', '彭伯顿', '桑顿', '克劳福德', '莫里森',
+    '黑斯廷斯', '普雷斯科特', '兰福德', '奥尔德里奇', '蒙塔古', '惠特菲尔德', '万斯',
+    '布拉德利', '霍洛韦', '克雷文', '马什', '吉尔曼', '德比', '皮克曼',
+    '阿米蒂奇', '赖斯', '摩根', '沃伦', '道格拉斯', '格雷', '查普曼', '弗莱彻',
+    '赖特', '亨特', '考特', '弗林德斯', '霍布豪斯', '怀亚特', '斯通'
   ];
-  return pick(surnames) + pick(givenNames);
+  return pick(firstNames) + ' ' + pick(lastNames);
 }
 
 // Wiki 随机灵感表数据
@@ -378,35 +370,34 @@ const BG_RANDOM_TABLES = {
       '苗条', '优雅', '衣着破旧', '矮壮', '脸色苍白', '阴沉', '平凡', '乐观',
       '晒黑', '皱纹', '古板', '羞怯', '机智', '强壮', '娇美', '肌肉发达', '魁梧', '虚弱'
     ],
-    // 写作模板：明确、感性、着重
     templates: [
-      (kws, gender) => `${gender}给人的第一印象是${kws.join('而')}。`,
-      (kws, gender) => `一个${kws.join('、')}的${gender === '女' ? '女人' : gender === '男' ? '男人' : '人'}，走在人群中${kws.includes('引人瞩目') ? '格外显眼' : '并不起眼'}。`,
-      (kws, gender) => `${gender}的外表可以用两个词概括：${kws[0]}和${kws[1]}。这种气质深入骨髓，无法伪装。`,
-      (kws, gender) => `${kws[0]}——这是人们对${gender}最直观的评价。${kws.length > 1 ? `而那${kws[1]}的特质，只有在深入接触后才会被发现。` : ''}`,
+      (kws, gt) => `${gt}给人的第一印象是${kws.join('而')}。`,
+      (kws, gt) => `一个${kws.join('、')}的${gt}，走在人群中${kws.includes('引人瞩目') ? '格外显眼' : '并不起眼'}。`,
+      (kws, gt) => `${gt}的外表可以用两个词概括：${kws[0]}和${kws[1]}。这种气质深入骨髓，无法伪装。`,
+      (kws, gt) => `${kws[0]}——这是人们对${gt}最直观的评价。${kws.length > 1 ? `而那${kws[1]}的特质，只有在深入接触后才会被发现。` : ''}`,
     ],
   },
 
   // ===== 思想与信念：1D10 表 =====
   ideology: [
     { main: '崇拜一位大能', examples: ['毗湿奴', '耶稣', '海尔·塞拉西一世', '佛陀', '真主安拉'] },
-    { main: '没有宗教', examples: ['坚定的无神论者', '人文主义者', '世俗论者', '不可知论者'] },
+    { main: '没有宗教信仰', examples: ['坚定的无神论者', '人文主义者', '世俗论者', '不可知论者'] },
     { main: '科学终将解释一切', examples: ['进化论', '低温学', '空间探索', '量子力学'] },
     { main: '相信命运', examples: ['因果报应', '社会阶级', '迷信', '天命'] },
     { main: '协会或秘密结社的一员', examples: ['共济会', '妇女协会', '匿名者', '玫瑰十字会'] },
     { main: '社会上的罪恶应该被根除', examples: ['毒品', '暴力', '种族偏见', '腐败'] },
     { main: '神秘学', examples: ['占星术', '唯心论', '塔罗牌', '炼金术'] },
     { main: '政治', examples: ['保守派', '社会主义者', '自由主义者', '无政府主义者'] },
-    { main: '"金钱就是力量"', examples: ['贪婪', '进取', '无情', '精明'] },
-    { main: '活动家/积极分子', examples: ['女权主义', '权利平等', '工会权力', '环保运动'] },
+    { main: '金钱就是力量', examples: ['贪婪', '进取', '无情', '精明'] },
+    { main: '活动家', examples: ['女权主义', '权利平等', '工会权力', '环保运动'] },
   ],
   ideologyTemplates: [
-    (main, example, gender) => `${gender}坚信${main}——${gender === '女' ? '她' : '他'}是一名${example}，并以此为人生信条。`,
-    (main, example, gender) => `"${main}"——这是${gender}最常挂在嘴边的话。作为一名${example}，${gender === '女' ? '她' : '他'}愿意为此付出一切。`,
-    (main, example, gender) => `尽管经历过许多动摇信念的事，${gender}依然是一名忠实的${example}。${gender === '女' ? '她' : '他'}深信${main}。`,
-    (main, example, gender) => `${gender}的人生哲学可以用一句话概括：${main}。${gender === '女' ? '她' : '他'}以${example}的身份，在旁人眼中显得有些格格不入。`,
-    (main, example, gender) => `在内心深处，${gender}是一名${example}。${main}——这种信念支撑着${gender === '女' ? '她' : '他'}度过了最黑暗的时光。`,
-    (main, example, gender) => `${gender}并不经常谈论自己的信仰，但了解${gender === '女' ? '她' : '他'}的人都知道，${gender === '女' ? '她' : '他'}是一名${example}，坚信${main}。`,
+    (main, example, gt) => `${gt}坚信${main}——作为一名${example}，这构成了${gt}最核心的人生信条。`,
+    (main, example, gt) => `"${main}"——这是${gt}最常挂在嘴边的话。作为一名${example}，${gt}愿意为此付出一切。`,
+    (main, example, gt) => `尽管经历过许多动摇信念的事，${gt}依然是一名忠实的${example}，深信${main}。`,
+    (main, example, gt) => `${gt}的人生哲学可以用一句话概括：${main}。作为一名${example}，${gt}在旁人眼中显得有些格格不入。`,
+    (main, example, gt) => `在内心深处，${gt}是一名${example}。${main}——这种信念支撑着${gt}度过了最黑暗的时光。`,
+    (main, example, gt) => `${gt}并不经常谈论自己的信仰，但了解${gt}的人都知道，${gt}坚信${main}，是一名虔诚的${example}。`,
   ],
 
   // ===== 重要之人：两步随机（是谁 + 为什么重要）=====
@@ -414,76 +405,76 @@ const BG_RANDOM_TABLES = {
     who: [
       { main: '父母', examples: ['母亲', '父亲', '继母', '继父'] },
       { main: '祖父母', examples: ['外祖母', '祖父', '外祖父', '祖母'] },
-      { main: '兄弟姐妹', examples: ['兄弟', '异母或异父兄弟', '继姐妹', '姐姐'] },
+      { main: '兄弟姐妹', examples: ['兄弟', '异母兄弟', '继姐妹', '姐姐'] },
       { main: '子女', examples: ['儿子', '女儿'] },
       { main: '伴侣', examples: ['配偶', '未婚夫', '恋人'] },
-      { main: '教授你最高本职技能的人', examples: ['一位严厉的导师', '一位慈祥的老教授', '一位退伍军人', '一位手艺精湛的匠人'] },
+      { main: '教授自己最高本职技能的导师', examples: ['一位严厉的导师', '一位慈祥的老教授', '一位退伍军人', '一位手艺精湛的匠人'] },
       { main: '儿时的朋友', examples: ['同学', '邻居', '一起长大的发小'] },
       { main: '一位名人', examples: ['影星', '政客', '音乐家', '作家'] },
-      { main: '游戏中的调查员同伴', examples: ['并肩作战的搭档', '值得信赖的战友', '亦师亦友的同行者'] },
-      { main: '游戏中的NPC', examples: ['一位神秘的线人', '一位古怪的店主', '一位退休的侦探'] },
+      { main: '调查员同伴', examples: ['并肩作战的搭档', '值得信赖的战友', '亦师亦友的同行者'] },
+      { main: '一位NPC', examples: ['一位神秘的线人', '一位古怪的店主', '一位退休的侦探'] },
     ],
     why: [
-      { main: '你感激他们', examples: ['在最困难的时候伸出援手', '无私地给予了帮助', '改变了你的人生轨迹'] },
-      { main: '他们教会了你一些东西', examples: ['一项重要的技能', '为人处世的道理', '面对恐惧的勇气'] },
-      { main: '他们赋予你生命的意义', examples: ['让你找到了活下去的理由', '给了你奋斗的目标', '让你明白了什么是真正重要的'] },
-      { main: '你亏欠他们，想要寻求谅解', examples: ['曾经辜负了他们的信任', '在关键时刻选择了逃避', '说了无法收回的话'] },
-      { main: '你们有着共同的经历', examples: ['一起经历过生死考验', '共同保守着一个秘密', '在同一场灾难中幸存'] },
-      { main: '你希望向他们证明自己', examples: ['渴望得到认可', '想要证明自己配得上他们的期望', '不甘心被看低'] },
-      { main: '你崇拜他们', examples: ['他们是你的精神支柱', '你以他们为榜样', '你渴望成为像他们一样的人'] },
-      { main: '你感到后悔', examples: ['没有在最后时刻陪伴在侧', '没能说出口的话', '错失了和解的机会'] },
-      { main: '你想证明自己比他们更好', examples: ['不甘心永远活在他们的阴影下', '想要超越他们的成就', '要让他们刮目相看'] },
-      { main: '他们曾迫害过你，你想要报复', examples: ['毁掉了你的家庭', '夺走了你最珍贵的东西', '让你蒙受了不白之冤'] },
+      { main: '感激', examples: ['在最困难的时候伸出援手', '无私地给予了帮助', '改变了自己的人生轨迹'] },
+      { main: '教会了自己一些东西', examples: ['一项重要的技能', '为人处世的道理', '面对恐惧的勇气'] },
+      { main: '赋予了自己生命的意义', examples: ['让自己找到了活下去的理由', '给了自己奋斗的目标', '让自己明白了什么是真正重要的'] },
+      { main: '亏欠，想要寻求谅解', examples: ['曾经辜负了信任', '在关键时刻选择了逃避', '说了无法收回的话'] },
+      { main: '有着共同的经历', examples: ['一起经历过生死考验', '共同保守着一个秘密', '在同一场灾难中幸存'] },
+      { main: '希望向对方证明自己', examples: ['渴望得到认可', '想要证明自己配得上期望', '不甘心被看低'] },
+      { main: '崇拜', examples: ['是自己的精神支柱', '以对方为榜样', '渴望成为像对方一样的人'] },
+      { main: '感到后悔', examples: ['没有在最后时刻陪伴在侧', '没能说出口的话', '错失了和解的机会'] },
+      { main: '想证明自己比对方更好', examples: ['不甘心永远活在对方的阴影下', '想要超越对方的成就', '要让对方刮目相看'] },
+      { main: '曾迫害过自己，想要报复', examples: ['毁掉了自己的家庭', '夺走了自己最珍贵的东西', '让自己蒙受了不白之冤'] },
     ],
     templates: [
-      (who, why, name, gender) => `${name}——${gender === '女' ? '她' : '他'}的${who}。${gender === '女' ? '她' : '他'}${why}。${name}在${gender === '女' ? '她' : '他'}心中占据着不可替代的位置。`,
-      (who, why, name, gender) => `在${gender}的生命中，${name}是最重要的人。作为${gender === '女' ? '她' : '他'}的${who}，${name}${why}。${gender === '女' ? '她' : '他'}至今仍时常想起${name}。`,
-      (who, why, name, gender) => `${gender}永远不会忘记${name}——${gender === '女' ? '她' : '他'}的${who}。${name}${why}。这段关系塑造了${gender}成为今天的自己。`,
-      (who, why, name, gender) => `${name}是${gender === '女' ? '她' : '他'}的${who}。${gender === '女' ? '她' : '他'}${why}。每当夜深人静，${gender}总会想起${name}。`,
-      (who, why, name, gender) => `${name}，${gender === '女' ? '她' : '他'}的${who}。${name}${why}。如果没有${name}，${gender}的人生可能会走向完全不同的方向。`,
+      (who, why, name, gt) => `${name}是${gt}的${who}。${gt}对${name}充满${why}。${name}在${gt}心中占据着不可替代的位置。`,
+      (who, why, name, gt) => `在${gt}的生命中，${name}是最重要的人。作为${gt}的${who}，${name}让${gt}${why}。${gt}至今仍时常想起${name}。`,
+      (who, why, name, gt) => `${gt}永远不会忘记${name}——${gt}的${who}。${name}让${gt}${why}。这段关系塑造了${gt}成为今天的自己。`,
+      (who, why, name, gt) => `${name}，${gt}的${who}。${gt}对${name}${why}。每当夜深人静，${gt}总会想起${name}。`,
+      (who, why, name, gt) => `${name}是${gt}的${who}。${gt}对${name}${why}。如果没有${name}，${gt}的人生可能会走向完全不同的方向。`,
     ],
   },
 
   // ===== 意义非凡之地：1D10 表 =====
   meaningfulPlace: [
-    { main: '你学习的地方', examples: ['一所古老的大学', '一间乡村小学', '一所军事学院', '一所音乐学院'] },
-    { main: '你的故乡', examples: ['一个偏远的小村庄', '一座繁华的大城市', '一个宁静的海滨小镇', '一个山间集镇'] },
-    { main: '你邂逅初恋的地方', examples: ['一场露天音乐会', '一个度假胜地', '一个昏暗的防空洞', '一间咖啡馆'] },
-    { main: '供你静思的地方', examples: ['一间堆满古籍的图书馆', '一条属于你的乡间步道', '一个安静的钓场', '一座教堂的钟楼'] },
-    { main: '社交场所', examples: ['一家上流俱乐部', '一间当地酒吧', '叔叔家的宅子', '一间棋社'] },
-    { main: '和你的思想与信念有关的地方', examples: ['城区教堂', '一座古老的寺庙', '一片神秘的巨石阵', '一间冥想室'] },
-    { main: '重要之人的坟墓', examples: ['父母的合葬墓', '子女的墓碑', '恋人的安息之地', '导师的墓地'] },
-    { main: '你的家', examples: ['一座乡间庄园', '一间狭小的出租公寓', '收养你长大的孤儿院', '一栋老旧的联排别墅'] },
-    { main: '你一生中最幸福的时候所在的地方', examples: ['初吻时的公园长椅', '你的大学校园', '一个夏日的湖边', '一间充满笑声的厨房'] },
-    { main: '你的工作场所', examples: ['一间繁忙的办公室', '一间古老的图书馆', '一家银行', '一间实验室'] },
+    { main: '学习的地方', examples: ['一所古老的大学', '一间乡村小学', '一所军事学院', '一所音乐学院'] },
+    { main: '故乡', examples: ['一个偏远的小村庄', '一座繁华的大城市', '一个宁静的海滨小镇', '一个山间集镇'] },
+    { main: '邂逅初恋的地方', examples: ['一场露天音乐会', '一个度假胜地', '一个昏暗的防空洞', '一间咖啡馆'] },
+    { main: '供自己静思的地方', examples: ['一间堆满古籍的图书馆', '一条属于你的乡间步道', '一个安静的钓场', '一座教堂的钟楼'] },
+    { main: '常去的社交场所', examples: ['一家上流俱乐部', '一间当地酒吧', '叔叔家的宅子', '一间棋社'] },
+    { main: '和思想与信念有关的地方', examples: ['城区教堂', '一座古老的寺庙', '一片神秘的巨石阵', '一间冥想室'] },
+    { main: '重要之人的安息之地', examples: ['父母的合葬墓', '子女的墓碑', '恋人的安息之地', '导师的墓地'] },
+    { main: '家', examples: ['一座乡间庄园', '一间狭小的出租公寓', '收养自己长大的孤儿院', '一栋老旧的联排别墅'] },
+    { main: '一生中最幸福时刻所在的地方', examples: ['初吻时的公园长椅', '大学校园', '一个夏日的湖边', '一间充满笑声的厨房'] },
+    { main: '工作场所', examples: ['一间繁忙的办公室', '一间古老的图书馆', '一家银行', '一间实验室'] },
   ],
   placeTemplates: [
-    (main, example, gender) => `${example}——${main}。${gender === '女' ? '她' : '他'}在那里度过了最难忘的时光，那里的一切都历历在目。`,
-    (main, example, gender) => `对${gender}来说，${example}不仅仅是一个地点。作为${main}，那里承载着${gender === '女' ? '她' : '他'}最深沉的记忆。`,
-    (main, example, gender) => `${gender}经常梦到${example}。那是${main}，${gender === '女' ? '她' : '他'}知道总有一天必须回去。`,
-    (main, example, gender) => `${example}，${main}。在${gender === '女' ? '她' : '他'}的心中，那里占据着无可替代的位置。`,
-    (main, example, gender) => `${gender}曾发誓再也不回到${example}，但作为${main}，那里有着${gender === '女' ? '她' : '他'}无法割舍的回忆。`,
+    (main, example, gt) => `${example}——${gt}的${main}。${gt}在那里度过了最难忘的时光，那里的一切都历历在目。`,
+    (main, example, gt) => `对${gt}来说，${example}不仅仅是一个地点。作为${gt}的${main}，那里承载着${gt}最深沉的记忆。`,
+    (main, example, gt) => `${gt}经常梦到${example}。那是${gt}的${main}，${gt}知道总有一天必须回去。`,
+    (main, example, gt) => `${example}，${gt}的${main}。在${gt}的心中，那里占据着无可替代的位置。`,
+    (main, example, gt) => `${gt}曾发誓再也不回到${example}，但作为${gt}的${main}，那里有着${gt}无法割舍的回忆。`,
   ],
 
   // ===== 宝贵之物：1D10 表 =====
   treasuredPossession: [
-    { main: '与你最高的技能有关的物品', examples: ['一把精密的手术刀', '一本写满公式的笔记本', '一台老旧的相机', '一套精致的绘图工具'] },
-    { main: '职业的必备物品', examples: ['一个磨损的公文包', '一把万能钥匙', '一台便携式打字机', '一套听诊器'] },
+    { main: '与最高技能有关的物品', examples: ['一把精密的手术刀', '一本写满公式的笔记本', '一台老旧的相机', '一套精致的绘图工具'] },
+    { main: '职业必备物品', examples: ['一个磨损的公文包', '一把万能钥匙', '一台便携式打字机', '一套听诊器'] },
     { main: '儿时的纪念品', examples: ['一只褪色的泰迪熊', '一枚弹珠', '一本童话书', '一只手工木雕'] },
     { main: '逝者的遗物', examples: ['父亲的怀表', '母亲的项链', '导师的钢笔', '战友的军牌'] },
-    { main: '重要之人送你的东西', examples: ['一枚手工戒指', '一条围巾', '一本书', '一把钥匙'] },
-    { main: '你的收藏品', examples: ['一套古币', '一组蝴蝶标本', '一排旧唱片', '一盒火柴盒'] },
-    { main: '你找到的一些东西，但你并不知道它是什么', examples: ['一块刻有符文的黑色石头', '一枚来历不明的古老徽章', '一张写满未知文字的羊皮纸', '一个形状奇特的金属球'] },
+    { main: '重要之人赠送的礼物', examples: ['一枚手工戒指', '一条围巾', '一本书', '一把钥匙'] },
+    { main: '自己的收藏品', examples: ['一套古币', '一组蝴蝶标本', '一排旧唱片', '一盒火柴盒'] },
+    { main: '找到的神秘物品', examples: ['一块刻有符文的黑色石头', '一枚来历不明的古老徽章', '一张写满未知文字的羊皮纸', '一个形状奇特的金属球'] },
     { main: '一件体育用品', examples: ['一只磨损的棒球手套', '一副拳击手套', '一根台球杆', '一只足球'] },
     { main: '一件武器', examples: ['一把老式左轮手枪', '一把猎刀', '一根手杖剑', '一把猎枪'] },
     { main: '一只宠物', examples: ['一只名叫"影子"的黑猫', '一只忠诚的老猎犬', '一只聪明的鹦鹉', '一只温顺的灰兔子'] },
   ],
   treasureTemplates: [
-    (main, example, gender) => `${example}——${main}。${gender === '女' ? '她' : '他'}把它视为护身符，无论走到哪里都不会将它离身。`,
-    (main, example, gender) => `${gender}随身携带着${example}。作为${main}，它是${gender === '女' ? '她' : '他'}最珍贵的财产。`,
-    (main, example, gender) => `${example}。${main}——别人或许觉得它毫无价值，但对${gender}来说，它是无价之宝。`,
-    (main, example, gender) => `${example}——${main}。${gender === '女' ? '她' : '他'}有时会在深夜拿出来端详，试图从中找到更多的意义。`,
-    (main, example, gender) => `${example}。作为${main}，它承载着${gender === '女' ? '她' : '他'}无法割舍的情感。失去它，就等于失去了一部分自己。`,
+    (main, example, gt) => `${example}——${gt}的${main}。${gt}把它视为护身符，无论走到哪里都不会离身。`,
+    (main, example, gt) => `${gt}随身携带着${example}。作为${gt}的${main}，它是${gt}最珍贵的财产。`,
+    (main, example, gt) => `${example}。作为${gt}的${main}，别人或许觉得它毫无价值，但对${gt}来说，它是无价之宝。`,
+    (main, example, gt) => `${example}——${gt}的${main}。${gt}有时会在深夜拿出来端详，试图从中找到更多的意义。`,
+    (main, example, gt) => `${example}。作为${gt}的${main}，它承载着${gt}无法割舍的情感。失去它，就等于失去了一部分自己。`,
   ],
 
   // ===== 特质：1D10 表 =====
@@ -492,7 +483,7 @@ const BG_RANDOM_TABLES = {
     { main: '动物之友', examples: ['对任何动物都有着天然的亲和力', '总能赢得动物的信任', '家里收养了无数流浪动物'] },
     { main: '梦想家', examples: ['总是沉浸在自己的幻想世界中', '对未来有着美好的憧憬', '常常提出别人觉得不切实际的想法'] },
     { main: '享乐主义', examples: ['追求生活中的一切美好事物', '坚信人生苦短、及时行乐', '对美食、美酒和艺术有着无法抗拒的热爱'] },
-    { main: '赌徒、敢于冒险', examples: ['在赌桌上和人生中都敢于押上一切', '越是危险的局面越能激发斗志', '相信运气总站在自己这边'] },
+    { main: '赌徒', examples: ['在赌桌上和人生中都敢于押上一切', '越是危险的局面越能激发斗志', '相信运气总站在自己这边'] },
     { main: '料理能手', examples: ['能用最简单的食材做出令人惊叹的美食', '厨房是绝对的主场', '烹饪是缓解压力的最佳方式'] },
     { main: '万人迷', examples: ['无论走到哪里都是众人瞩目的焦点', '天生具有吸引他人的魅力', '只需一个微笑就能让人如沐春风'] },
     { main: '义薄云天', examples: ['为了朋友可以两肋插刀', '信守承诺胜过一切', '正义感是行动的唯一准则'] },
@@ -500,11 +491,11 @@ const BG_RANDOM_TABLES = {
     { main: '野心勃勃', examples: ['有着远超常人的抱负和决心', '不满足于现状，永远在追求更高', '愿意为了目标付出任何代价'] },
   ],
   traitTemplates: [
-    (main, example, gender) => `${gender}最大的特质是${main}——${example}。这种特质让${gender === '女' ? '她' : '他'}在人群中脱颖而出。`,
-    (main, example, gender) => `最了解${gender}的人都会提到${gender === '女' ? '她' : '他'}的${main}。${example}。这既是${gender === '女' ? '她' : '他'}最大的优点，也是最显著的特征。`,
-    (main, example, gender) => `${main}——这是${gender}最显著的特征。${example}。从很小的时候起，这种特质就伴随着${gender === '女' ? '她' : '他'}。`,
-    (main, example, gender) => `${gender}并不认为${main}有什么特别，但身边的人都能感受到。${example}。在旁人看来，这或许微不足道，但对${gender === '女' ? '她' : '他'}来说，这是定义自己的东西。`,
-    (main, example, gender) => `如果有人问起${gender}最大的特点，答案一定是${main}。${example}。${gender === '女' ? '她' : '他'}有时分不清这究竟是天赋还是诅咒。`,
+    (main, example, gt) => `${gt}最大的特质是${main}——${example}。这种特质让${gt}在人群中脱颖而出。`,
+    (main, example, gt) => `最了解${gt}的人都会提到${gt}的${main}。${example}。这既是${gt}最大的优点，也是最显著的特征。`,
+    (main, example, gt) => `${main}——这是${gt}最显著的特征。${example}。从很小的时候起，这种特质就伴随着${gt}。`,
+    (main, example, gt) => `${gt}并不认为${main}有什么特别，但身边的人都能感受到。${example}。在旁人看来，这或许微不足道，但对${gt}来说，这是定义自己的东西。`,
+    (main, example, gt) => `如果有人问起${gt}最大的特点，答案一定是${main}。${example}。${gt}有时分不清这究竟是天赋还是诅咒。`,
   ],
 };
 
@@ -535,10 +526,9 @@ function generateBackground(category) {
       const table = BG_RANDOM_TABLES.significantPerson;
       const whoEntry = pick(table.who);
       const whyEntry = pick(table.why);
-      const whoExample = pick(whoEntry.examples);
       const whyExample = pick(whyEntry.examples);
       const name = generateRandomPersonName();
-      const who = whoEntry.main === '教授你最高本职技能的人' ? whoExample : `${whoExample}（${whoEntry.main}）`;
+      const who = whoEntry.main; // 直接使用类别名作为关系描述
       const why = `${whyEntry.main}——${whyExample}`;
       const template = pick(table.templates);
       return template(who, why, name, genderTitle);
@@ -762,8 +752,256 @@ function renderStep7(container) {
   container.innerHTML = html;
 }
 
-// ----- Step 8: Final Character Sheet -----
+// ----- Step 8: Equipment -----
+// 装备步骤相关状态
+let _equipActiveCategory = null; // 当前展开的分类标签
+let _equipSearchTimeout = null;
+
+function addEquipment(name, price, type) {
+  if (!name || !name.trim()) {
+    notify('请输入物品名称', 'error');
+    return;
+  }
+  price = parseFloat(price) || 0;
+  if (price < 0) price = 0;
+  type = type || '日常用品';
+
+  state.equipment.push({ name: name.trim(), type, price, detail: '' });
+  saveState();
+  renderStep();
+  notify('已添加: ' + name.trim(), 'success');
+}
+
+function removeEquipment(idx) {
+  if (idx < 0 || idx >= state.equipment.length) return;
+  let removed = state.equipment.splice(idx, 1)[0];
+  saveState();
+  renderStep();
+  notify('已移除: ' + removed.name, 'info');
+}
+
+function renderEquipmentSuggestions(query) {
+  let container = document.getElementById('equipSuggestions');
+  if (!container) return;
+
+  if (!query || !query.trim()) {
+    // 无搜索词时显示所有分类
+    renderEquipmentCategoryBrowse(container);
+    return;
+  }
+
+  let results = searchEquipment(query);
+  if (results.length === 0) {
+    container.innerHTML = `<div class="equip-suggestion-empty">未找到匹配物品，可手动输入名称和价格后添加</div>`;
+    container.classList.remove('hidden');
+    return;
+  }
+
+  // 按分类分组
+  let grouped = {};
+  results.forEach(item => {
+    if (!grouped[item.category]) grouped[item.category] = [];
+    grouped[item.category].push(item);
+  });
+
+  let html = '';
+  for (let cat in grouped) {
+    let icon = EQUIPMENT_CATEGORY_ICONS[cat] || '&#128230;';
+    html += `<div class="equip-suggestion-group">
+      <div class="equip-suggestion-cat">${icon} ${cat}</div>
+      <div class="equip-suggestion-items">`;
+    grouped[cat].forEach(item => {
+      let alreadyAdded = state.equipment.some(e => e.name === item.name);
+      html += `<div class="equip-suggestion-item ${alreadyAdded ? 'already-added' : ''}"
+        onclick="${alreadyAdded ? '' : `addEquipment('${item.name.replace(/'/g, "\\'")}', ${item.price}, '${item.category}'); document.getElementById('equipSearchInput').value='';`}">
+        <span class="esi-name">${item.name}</span>
+        <span class="esi-price">$${item.price.toFixed(2)}</span>
+        ${alreadyAdded ? '<span class="esi-added-tag">已添加</span>' : ''}
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+  container.innerHTML = html;
+  container.classList.remove('hidden');
+}
+
+function renderEquipmentCategoryBrowse(container) {
+  let categories = getEquipmentCategories();
+  let html = '<div class="equip-category-tabs">';
+  categories.forEach(cat => {
+    let icon = EQUIPMENT_CATEGORY_ICONS[cat] || '&#128230;';
+    let isActive = _equipActiveCategory === cat;
+    html += `<button class="equip-cat-tab ${isActive ? 'active' : ''}"
+      onclick="toggleEquipCategory('${cat}')">${icon} ${cat}</button>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+  container.classList.remove('hidden');
+
+  // 如果有展开的分类，渲染该分类下的物品
+  let itemsContainer = document.getElementById('equipCategoryItems');
+  if (itemsContainer && _equipActiveCategory) {
+    let items = getCurrentEquipmentDB()[_equipActiveCategory] || [];
+    let icon = EQUIPMENT_CATEGORY_ICONS[_equipActiveCategory] || '&#128230;';
+    let itemsHtml = `<div class="equip-category-header">${icon} ${_equipActiveCategory}</div>`;
+    itemsHtml += `<div class="equip-category-grid">`;
+    items.forEach(item => {
+      let alreadyAdded = state.equipment.some(e => e.name === item.name);
+      itemsHtml += `<div class="equip-cat-item ${alreadyAdded ? 'already-added' : ''}"
+        onclick="${alreadyAdded ? '' : `addEquipment('${item.name.replace(/'/g, "\\'")}', ${item.price}, '${item.category}');`}">
+        <span class="eci-name">${item.name}</span>
+        <span class="eci-price">$${item.price.toFixed(2)}</span>
+        ${alreadyAdded ? '<span class="eci-added-tag">已添加</span>' : ''}
+      </div>`;
+    });
+    itemsHtml += `</div>`;
+    itemsContainer.innerHTML = itemsHtml;
+    itemsContainer.classList.remove('hidden');
+  } else if (itemsContainer) {
+    itemsContainer.innerHTML = '';
+    itemsContainer.classList.add('hidden');
+  }
+}
+
+function toggleEquipCategory(cat) {
+  _equipActiveCategory = (_equipActiveCategory === cat) ? null : cat;
+  let container = document.getElementById('equipSuggestions');
+  if (container) renderEquipmentCategoryBrowse(container);
+}
+
+function getEquipmentTotalSpent() {
+  return state.equipment.reduce((sum, item) => sum + (item.price || 0), 0);
+}
+
+function autoImportTreasuredPossessions() {
+  // 从背景故事中的"宝贵之物"自动带入
+  let treasure = state.background.find(b => b.category === '宝贵之物' && b.content && b.content.trim());
+  if (treasure && !state.equipment.some(e => e.type === '特殊物品' && e.name === treasure.content)) {
+    state.equipment.push({
+      name: treasure.content,
+      type: '特殊物品',
+      price: 0,
+      detail: '来自背景故事中的宝贵之物'
+    });
+  }
+}
+
 function renderStep8(container) {
+  // 首次进入时，根据信用评级设置可支配现金，并自动导入宝贵之物
+  let crInfo = getCreditRatingInfo(state.creditRating);
+  if (state.spendingCash === 0 && state.equipment.length === 0) {
+    state.spendingCash = crInfo.cash;
+    autoImportTreasuredPossessions();
+    saveState();
+  }
+
+  // 如果信用评级变化了，更新 spendingCash（仅当未手动修改时）
+  let totalSpent = getEquipmentTotalSpent();
+  let remaining = state.spendingCash - totalSpent;
+
+  let html = `
+    <div class="card">
+      <div class="card-title"><span class="icon">&#128230;</span> 决定装备</div>
+      <p class="section-desc">
+        调查员的日常生活水平取决于其信用评级。根据信用评级确定可支配现金和资产，为调查员选择随身携带的物品、武器和装备。
+      </p>
+
+      <!-- 信用评级信息 -->
+      <div class="equip-credit-info">
+        <div class="eci-row">
+          <div class="eci-label">信用评级</div>
+          <div class="eci-value">${state.creditRating} <span class="eci-level">(${crInfo.level})</span></div>
+        </div>
+        <div class="eci-row">
+          <div class="eci-label">可支配现金</div>
+          <div class="eci-value eci-cash">$${state.spendingCash.toFixed(2)}</div>
+        </div>
+        <div class="eci-row">
+          <div class="eci-label">资产</div>
+          <div class="eci-value">${crInfo.assets}</div>
+        </div>
+      </div>
+
+      <!-- 添加物品 -->
+      <div class="equip-search-box">
+        <div class="equip-search-header">
+          <div class="equip-search-input-wrap">
+            <span class="equip-search-icon">&#128269;</span>
+            <input type="text" id="equipSearchInput" class="equip-search-input"
+              placeholder="搜索物品名称..."
+              oninput="onEquipSearchInput(this.value)"
+              onfocus="onEquipSearchInput(this.value)">
+          </div>
+          <div class="equip-custom-add">
+            <input type="text" id="equipCustomName" placeholder="自定义物品名称"
+              class="equip-custom-input">
+            <input type="number" id="equipCustomPrice" placeholder="价格" min="0" step="0.01"
+              class="equip-custom-input equip-custom-price">
+            <button class="btn btn-accent btn-sm" onclick="addCustomEquipment()">添加</button>
+          </div>
+        </div>
+        <div id="equipSuggestions" class="equip-suggestions hidden"></div>
+        <div id="equipCategoryItems" class="equip-category-items hidden"></div>
+      </div>
+
+      <!-- 我的随身物品 -->
+      <div class="equip-my-items">
+        <div class="equip-my-items-title">&#127890; 我的随身物品</div>
+  `;
+
+  if (state.equipment.length === 0) {
+    html += `<div class="equip-empty">尚未添加任何物品。请搜索或自定义添加。</div>`;
+  } else {
+    state.equipment.forEach((item, idx) => {
+      let icon = EQUIPMENT_CATEGORY_ICONS[item.type] || '&#128230;';
+      html += `<div class="equip-item">
+        <span class="ei-icon">${icon}</span>
+        <span class="ei-name">${item.name}</span>
+        <span class="ei-type">${item.type}</span>
+        <span class="ei-price">$${item.price.toFixed(2)}</span>
+        <button class="ei-remove" onclick="removeEquipment(${idx})">&#10005;</button>
+      </div>`;
+    });
+  }
+
+  html += `
+        <div class="equip-summary">
+          <span class="equip-spent-label">&#128176; 已花费</span>
+          <span class="equip-spent-value ${remaining < 0 ? 'over-budget' : ''}">$${totalSpent.toFixed(2)} / $${state.spendingCash.toFixed(2)}</span>
+          <span class="equip-remaining">剩余: $${remaining.toFixed(2)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+function onEquipSearchInput(value) {
+  clearTimeout(_equipSearchTimeout);
+  _equipActiveCategory = null; // 搜索时关闭分类浏览
+  _equipSearchTimeout = setTimeout(() => {
+    renderEquipmentSuggestions(value);
+  }, 150);
+}
+
+function addCustomEquipment() {
+  let nameEl = document.getElementById('equipCustomName');
+  let priceEl = document.getElementById('equipCustomPrice');
+  if (!nameEl) return;
+  let name = nameEl.value.trim();
+  let price = parseFloat(priceEl ? priceEl.value : 0) || 0;
+  if (!name) {
+    notify('请输入物品名称', 'error');
+    return;
+  }
+  addEquipment(name, price, '自定义');
+  nameEl.value = '';
+  if (priceEl) priceEl.value = '';
+}
+
+// ----- Step 9: Final Character Sheet -----
+function renderStep9(container) {
   calcDerived();
   let attrs = getEffectiveAttrs();
   let d = state.derived;
@@ -919,6 +1157,31 @@ function renderStep8(container) {
         </div>`;
       }
     });
+    html += `</div>`;
+  }
+
+  // Equipment
+  if (state.equipment.length > 0) {
+    let totalSpent = getEquipmentTotalSpent();
+    let crInfo = getCreditRatingInfo(state.creditRating);
+    html += `
+      <div class="char-sheet-section">
+        <h3>&#128230; 随身物品</h3>
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px;">
+          信用评级: ${state.creditRating} (${crInfo.level}) | 资产: ${crInfo.assets}
+        </div>
+    `;
+    state.equipment.forEach(item => {
+      let icon = EQUIPMENT_CATEGORY_ICONS[item.type] || '&#128230;';
+      html += `<div style="margin-bottom:4px;padding:4px 10px;background:var(--input-bg);border-radius:4px;font-size:0.85rem;">
+        ${icon} ${item.name} <span style="color:var(--text-muted);">(${item.type})</span>
+        ${item.price > 0 ? `<span style="color:var(--gold);float:right;">$${item.price.toFixed(2)}</span>` : ''}
+      </div>`;
+    });
+    html += `<div style="margin-top:8px;padding:6px 10px;background:rgba(201,168,76,0.08);border-radius:4px;font-size:0.85rem;color:var(--gold);">
+      可支配现金: $${(state.spendingCash - totalSpent).toFixed(2)}
+      <span style="color:var(--text-muted);"> (已花费 $${totalSpent.toFixed(2)} / $${state.spendingCash.toFixed(2)})</span>
+    </div>`;
     html += `</div>`;
   }
 
