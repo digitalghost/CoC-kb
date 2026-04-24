@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="g1" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#C9A84C" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#8B7535" stop-opacity="0.15"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#C9A84C" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#8B7535" stop-opacity="0.08"/>
+    </linearGradient>
+  </defs>
+  <!-- Main curl from top-right corner -->
+  <path d="M200,0 C175,10 155,28 145,50 C138,65 142,82 155,88 C163,92 170,86 167,78 C165,73 158,72 156,77"
+        fill="none" stroke="url(#g1)" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Secondary tendril downward -->
+  <path d="M200,0 C190,20 185,48 188,72 C190,88 195,100 200,110"
+        fill="none" stroke="url(#g2)" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Tertiary tendril left along top -->
+  <path d="M200,0 C170,5 140,3 115,8 C100,11 95,20 100,28"
+        fill="none" stroke="url(#g2)" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Small baroque spiral -->
+  <path d="M155,88 C165,98 178,95 182,86 C185,78 178,72 172,75 C168,77 168,82 172,83"
+        fill="none" stroke="url(#g1)" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Thorned vine along top -->
+  <path d="M200,0 Q165,4 130,0 Q105,-3 85,4"
+        fill="none" stroke="url(#g2)" stroke-width="1" stroke-linecap="round"/>
+  <path d="M165,2 L162,8 L159,2" fill="none" stroke="url(#g2)" stroke-width="0.7"/>
+  <path d="M140,1 L137,7 L134,1" fill="none" stroke="url(#g2)" stroke-width="0.7"/>
+  <path d="M115,0 L112,6 L109,0" fill="none" stroke="url(#g2)" stroke-width="0.7"/>
+  <!-- Thorned vine along right edge -->
+  <path d="M200,0 Q197,30 200,60 Q202,85 198,105"
+        fill="none" stroke="url(#g2)" stroke-width="1" stroke-linecap="round"/>
+  <path d="M198,30 L191,33 L198,36" fill="none" stroke="url(#g2)" stroke-width="0.7"/>
+  <path d="M199,55 L192,58 L199,61" fill="none" stroke="url(#g2)" stroke-width="0.7"/>
+  <path d="M198,80 L191,83 L198,86" fill="none" stroke="url(#g2)" stroke-width="0.7"/>
+  <!-- Crescent moon symbol -->
+  <path d="M130,55 A12,12 0 1,1 130,79 A8,8 0 1,0 130,55 Z" fill="none" stroke="url(#g1)" stroke-width="1.2"/>
+  <!-- Star accent -->
+  <path d="M100,28 L103,22 L106,28 L112,28 L107,32 L109,38 L103,34 L97,38 L99,32 L94,28 Z"
+        fill="none" stroke="url(#g2)" stroke-width="0.8"/>
+  <!-- Dots -->
+  <circle cx="175" cy="45" r="1.5" fill="#C9A84C" opacity="0.25"/>
+  <circle cx="120" cy="15" r="1.2" fill="#C9A84C" opacity="0.2"/>
+  <circle cx="190" cy="90" r="1.3" fill="#C9A84C" opacity="0.18"/>
+  <!-- Corner anchor -->
+  <line x1="200" y1="0" x2="178" y2="0" stroke="url(#g1)" stroke-width="2.5"/>
+  <line x1="200" y1="0" x2="200" y2="22" stroke="url(#g1)" stroke-width="2.5"/>
+</svg>

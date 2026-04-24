@@ -15,6 +15,7 @@ const WEAPONS_DATABASE = {
 
     // ===== 常规武器 =====
     '常规武器': [
+      { name: '徒手（拳打脚踢）', skill: '格斗(斗殴)', damage: '1D3+DB', armorPiercing: false, baseRange: '接触', attacksPerRound: '1', capacity: '-', malfunction: null, price20s: null, priceModern: null, era: '默认', category: '常规武器' },
       { name: '黄铜指虎', skill: '格斗(斗殴)', damage: '1D3+1+DB', armorPiercing: false, baseRange: '接触', attacksPerRound: '1', capacity: '-', malfunction: null, price20s: 1, priceModern: 10, era: '1920s，现代', category: '常规武器' },
       { name: '长鞭', skill: '格斗(鞭)', damage: '1D3+半DB', armorPiercing: false, baseRange: '3m', attacksPerRound: '1', capacity: '-', malfunction: null, price20s: 5, priceModern: 50, era: '1920s', category: '常规武器' },
       { name: '燃烧的火把', skill: '格斗(斗殴)', damage: '1D6+燃烧', armorPiercing: false, baseRange: '接触', attacksPerRound: '1', capacity: '-', malfunction: null, price20s: 0.05, priceModern: 0.5, era: '1920s，现代', category: '常规武器' },
@@ -135,6 +136,7 @@ const WEAPONS_DATABASE = {
 
     // ===== 常规武器 =====
     '常规武器': [
+      { name: '徒手（拳打脚踢）', skill: '格斗(斗殴)', damage: '1D3+DB', armorPiercing: false, baseRange: '接触', attacksPerRound: '1', capacity: '-', malfunction: null, price20s: null, priceModern: null, era: '默认', category: '常规武器' },
       { name: '弓箭', skill: '射击(弓)', damage: '1D6+半DB', armorPiercing: false, baseRange: '30m', attacksPerRound: '1', capacity: '1', malfunction: 97, price20s: 7, priceModern: 75, era: '现代', category: '常规武器' },
       { name: '黄铜指虎', skill: '格斗(斗殴)', damage: '1D3+1+DB', armorPiercing: false, baseRange: '接触', attacksPerRound: '1', capacity: '-', malfunction: null, price20s: 1, priceModern: 10, era: '1920s，现代', category: '常规武器' },
       { name: '燃烧的火把', skill: '格斗(斗殴)', damage: '1D6+燃烧', armorPiercing: false, baseRange: '接触', attacksPerRound: '1', capacity: '-', malfunction: null, price20s: 0.05, priceModern: 0.5, era: '1920s，现代', category: '常规武器' },

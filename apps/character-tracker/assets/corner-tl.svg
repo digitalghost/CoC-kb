@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 260" width="260" height="260">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C9A84C" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#8B7535" stop-opacity="0.25"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C9A84C" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#8B7535" stop-opacity="0.12"/>
+    </linearGradient>
+    <linearGradient id="g3" x1="0%" y1="0%" x2="80%" y2="80%">
+      <stop offset="0%" stop-color="#E8C86A" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#8B7535" stop-opacity="0.1"/>
+    </linearGradient>
+  </defs>
+  <!-- === PRIMARY TENDRIL — thick baroque scroll from origin === -->
+  <path d="M0,0 C25,8 50,22 68,45 C82,63 80,85 65,98 C55,107 42,105 40,95 C38,88 45,82 52,86"
+        fill="none" stroke="url(#g1)" stroke-width="3" stroke-linecap="round"/>
+  <!-- === SECONDARY TENDRIL — sweeping downward === -->
+  <path d="M0,0 C12,25 18,55 14,85 C11,105 5,120 0,135"
+        fill="none" stroke="url(#g2)" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- === TERTIARY TENDRIL — extending right along top === -->
+  <path d="M0,0 C35,6 70,8 105,2 C125,-2 140,5 135,18 C132,26 122,28 120,20"
+        fill="none" stroke="url(#g2)" stroke-width="2" stroke-linecap="round"/>
+  <!-- === FOURTH TENDRIL — diagonal sweep === -->
+  <path d="M0,0 C40,15 80,35 110,55 C130,68 138,85 128,95"
+        fill="none" stroke="url(#g3)" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- === BAROQUE SPIRAL 1 === -->
+  <path d="M65,98 C78,110 95,108 105,96 C112,88 108,74 98,70 C90,67 84,74 88,80 C91,84 96,83 97,79"
+        fill="none" stroke="url(#g1)" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- === BAROQUE SPIRAL 2 (smaller) === -->
+  <path d="M135,18 C145,28 155,25 158,16 C160,10 155,5 150,7 C147,8 146,12 149,13"
+        fill="none" stroke="url(#g2)" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- === THORNED VINE along top edge === -->
+  <path d="M0,0 Q40,5 80,0 Q110,-3 140,3"
+        fill="none" stroke="url(#g2)" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="M35,2 L38,9 L41,2" fill="none" stroke="url(#g2)" stroke-width="0.9"/>
+  <path d="M65,1 L68,8 L71,1" fill="none" stroke="url(#g2)" stroke-width="0.9"/>
+  <path d="M95,0 L98,7 L101,0" fill="none" stroke="url(#g2)" stroke-width="0.9"/>
+  <path d="M120,2 L123,9 L126,2" fill="none" stroke="url(#g2)" stroke-width="0.9"/>
+  <!-- === THORNED VINE along left edge === -->
+  <path d="M0,0 Q3,35 0,70 Q-2,100 2,130"
+        fill="none" stroke="url(#g2)" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="M2,30 L9,33 L2,36" fill="none" stroke="url(#g2)" stroke-width="0.9"/>
+  <path d="M1,55 L8,58 L1,61" fill="none" stroke="url(#g2)" stroke-width="0.9"/>
+  <path d="M2,80 L9,83 L2,86" fill="none" stroke="url(#g2)" stroke-width="0.9"/>
+  <path d="M1,105 L8,108 L1,111" fill="none" stroke="url(#g2)" stroke-width="0.9"/>
+  <!-- === ARCANE CIRCLE with ALL-SEEING EYE === -->
+  <circle cx="52" cy="86" r="18" fill="none" stroke="url(#g1)" stroke-width="1.2" stroke-dasharray="4,2.5"/>
+  <circle cx="52" cy="86" r="13" fill="none" stroke="url(#g2)" stroke-width="0.9"/>
+  <circle cx="52" cy="86" r="8" fill="none" stroke="url(#g3)" stroke-width="0.7"/>
+  <!-- Eye -->
+  <path d="M42,86 Q52,78 62,86 Q52,94 42,86 Z" fill="none" stroke="url(#g1)" stroke-width="1.3"/>
+  <circle cx="52" cy="86" r="2.5" fill="#C9A84C" opacity="0.55"/>
+  <circle cx="52" cy="86" r="1" fill="#0A0E14" opacity="0.6"/>
+  <!-- === GEOMETRIC TRIANGLE accent === -->
+  <path d="M105,96 L115,80 L125,96 Z" fill="none" stroke="url(#g2)" stroke-width="1"/>
+  <circle cx="115" cy="91" r="2" fill="#C9A84C" opacity="0.3"/>
+  <!-- === FINE FILIGREE CURLS === -->
+  <path d="M128,95 C140,105 152,100 150,90 C148,82 140,80 138,86"
+        fill="none" stroke="url(#g2)" stroke-width="1.3" stroke-linecap="round"/>
+  <path d="M14,85 C8,95 12,108 22,110 C30,112 34,105 30,100"
+        fill="none" stroke="url(#g3)" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- === DECORATIVE DOTS === -->
+  <circle cx="25" cy="55" r="2" fill="#C9A84C" opacity="0.3"/>
+  <circle cx="80" cy="40" r="1.5" fill="#C9A84C" opacity="0.25"/>
+  <circle cx="110" cy="20" r="1.8" fill="#C9A84C" opacity="0.2"/>
+  <circle cx="8" cy="95" r="1.5" fill="#C9A84C" opacity="0.2"/>
+  <circle cx="140" cy="50" r="1.2" fill="#C9A84C" opacity="0.18"/>
+  <circle cx="45" cy="120" r="1.3" fill="#C9A84C" opacity="0.15"/>
+  <!-- === CORNER ANCHOR LINES === -->
+  <line x1="0" y1="0" x2="22" y2="0" stroke="url(#g1)" stroke-width="3"/>
+  <line x1="0" y1="0" x2="0" y2="22" stroke="url(#g1)" stroke-width="3"/>
+  <!-- === TINY RUNIC MARKS === -->
+  <path d="M160,12 L165,5 L170,12" fill="none" stroke="url(#g3)" stroke-width="0.8"/>
+  <path d="M5,140 L10,133 L15,140" fill="none" stroke="url(#g3)" stroke-width="0.8"/>
+</svg>

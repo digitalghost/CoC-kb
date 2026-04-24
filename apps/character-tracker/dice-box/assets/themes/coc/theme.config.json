@@ -1,0 +1,25 @@
+{
+  "name": "CoC 克苏鲁",
+  "systemName": "coc",
+  "author": "Custom",
+  "version": 1.0,
+  "material": {
+    "type": "standard",
+    "diffuseTexture": "diffuse.jpg",
+    "diffuseLevel": 1,
+    "bumpTexture": "normal.png",
+    "bumpLevel": 0.8,
+    "specularTexture": "specular.jpg",
+    "specularPower": 1
+  },
+  "themeColor": "#2a4a3e",
+  "diceAvailable": [
+    "d4",
+    "d6",
+    "d8",
+    "d10",
+    "d12",
+    "d20",
+    "d100"
+  ]
+}

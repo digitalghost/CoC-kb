@@ -33,6 +33,224 @@ function generateRandomName() {
   return pick(firstNames) + ' ' + pick(lastNames);
 }
 
+// ----- Random Residence & Hometown Generator -----
+// 居所数据：根据时代提供合理的居住地选项
+const RESIDENCE_DATA = {
+  '1920s': {
+    // 新英格兰地区（洛夫克拉夫特核心区域）
+    newEngland: [
+      '马萨诸塞州，阿卡姆', '马萨诸塞州，波士顿', '马萨诸塞州，塞勒姆',
+      '马萨诸塞州，剑桥', '罗得岛州，普罗维登斯', '马萨诸塞州，敦威治',
+      '马萨诸塞州，印斯茅斯', '康涅狄格州，纽黑文',
+    ],
+    // 美国东部大城市
+    eastCoast: [
+      '纽约州，纽约', '宾夕法尼亚州，费城', '哥伦比亚特区，华盛顿',
+      '马里兰州，巴尔的摩', '新泽西州，大西洋城',
+    ],
+    // 美国中西部
+    midwest: [
+      '伊利诺伊州，芝加哥', '密歇根州，底特律', '俄亥俄州，克利夫兰',
+      '密苏里州，圣路易斯', '威斯康星州，密尔沃基',
+    ],
+    // 美国南部
+    south: [
+      '路易斯安那州，新奥尔良', '佐治亚州，亚特兰大', '田纳西州，孟菲斯',
+      '佛罗里达州，迈阿密', '南卡罗来纳州，查尔斯顿',
+    ],
+    // 美国西部
+    west: [
+      '加利福尼亚州，旧金山', '加利福尼亚州，洛杉矶', '华盛顿州，西雅图',
+      '科罗拉多州，丹佛', '内华达州，拉斯维加斯', '俄勒冈州，波特兰',
+    ],
+    // 国际城市
+    international: [
+      '英国，伦敦', '法国，巴黎', '埃及，开罗', '阿根廷，布宜诺斯艾利斯',
+      '日本，东京', '加拿大，蒙特利尔', '澳大利亚，悉尼',
+    ],
+  },
+  '现代': {
+    newEngland: [
+      '马萨诸塞州，阿卡姆', '马萨诸塞州，波士顿', '马萨诸塞州，塞勒姆',
+      '罗得岛州，普罗维登斯', '康涅狄格州，纽黑文', '新罕布什尔州，曼彻斯特',
+    ],
+    eastCoast: [
+      '纽约州，纽约', '宾夕法尼亚州，费城', '哥伦比亚特区，华盛顿',
+      '马里兰州，巴尔的摩', '弗吉尼亚州，阿灵顿', '新泽西州，纽瓦克',
+    ],
+    midwest: [
+      '伊利诺伊州，芝加哥', '密歇根州，底特律', '俄亥俄州，哥伦布',
+      '明尼苏达州，明尼阿波利斯', '密苏里州，堪萨斯城',
+    ],
+    south: [
+      '路易斯安那州，新奥尔良', '佐治亚州，亚特兰大', '佛罗里达州，迈阿密',
+      '得克萨斯州，休斯敦', '北卡罗来纳州，罗利',
+    ],
+    west: [
+      '加利福尼亚州，旧金山', '加利福尼亚州，洛杉矶', '华盛顿州，西雅图',
+      '科罗拉多州，丹佛', '内华达州，拉斯维加斯', '亚利桑那州，菲尼克斯',
+      '俄勒冈州，波特兰', '加利福尼亚州，圣迭戈',
+    ],
+    international: [
+      '英国，伦敦', '法国，巴黎', '日本，东京', '中国，上海', '中国，香港',
+      '埃及，开罗', '澳大利亚，悉尼', '加拿大，多伦多', '德国，柏林',
+      '韩国，首尔', '新加坡', '阿联酋，迪拜', '巴西，圣保罗',
+    ],
+  }
+};
+
+// 故乡数据：更偏重于出身地和成长背景
+const HOMETOWN_DATA = {
+  '1920s': {
+    // 新英格兰小镇（经典洛式风格）
+    newEnglandTowns: [
+      '马萨诸塞州，一个偏远的新英格兰小村庄', '马萨诸塞州，一座宁静的海滨小镇',
+      '罗得岛州，一座被森林环绕的山间集镇', '缅因州，一座荒凉的渔村',
+      '新罕布什尔州，一个与世隔绝的农场社区', '佛蒙特州，一座山谷中的磨坊小镇',
+      '康涅狄格州，一座古老的殖民时期小镇',
+    ],
+    // 美国城镇
+    americanTowns: [
+      '纽约州，一座繁华的工业城市', '宾夕法尼亚州，一个煤矿小镇',
+      '伊利诺伊州，一座中西部农业小镇', '俄亥俄州，一个宁静的湖畔城镇',
+      '路易斯安那州，一座弥漫着爵士乐的南方小镇', '得克萨斯州，一个广袤平原上的牧场小镇',
+      '加利福尼亚州，一座阳光明媚的海岸城镇', '佐治亚州，一个古老的南方种植园小镇',
+      '明尼苏达州，一座北方的伐木小镇', '佛罗里达州，一个热带沼泽边的小镇',
+    ],
+    // 国际出身
+    internationalTowns: [
+      '英国，伦敦东区的一个贫民街区', '法国，普罗旺斯的一个薰衣草小镇',
+      '爱尔兰，都柏林郊外的一个村庄', '意大利，西西里岛的一个海边小镇',
+      '德国，巴伐利亚的一个山间村庄', '波兰，华沙老城的一个犹太社区',
+      '中国，广东的一个沿海渔村', '日本，京都的一个传统町屋街区',
+      '墨西哥，瓦哈卡的一个印第安村落', '埃及，开罗老城的一个集市社区',
+    ],
+  },
+  '现代': {
+    newEnglandTowns: [
+      '马萨诸塞州，一个偏远的新英格兰小村庄', '马萨诸塞州，一座宁静的海滨小镇',
+      '罗得岛州，一座被森林环绕的山间集镇', '缅因州，一座荒凉的渔村',
+      '新罕布什尔州，一个与世隔绝的农场社区', '佛蒙特州，一座山谷中的小镇',
+      '康涅狄格州，一座富裕的郊区小镇',
+    ],
+    americanTowns: [
+      '纽约州，一座繁华的工业城市', '加利福尼亚州，硅谷附近的一个科技郊区',
+      '得克萨斯州，一个广袤平原上的牧场小镇', '佛罗里达州，一个阳光海岸边的退休社区',
+      '华盛顿州，西雅图郊外的一个雨林小镇', '伊利诺伊州，一座中西部大学城',
+      '科罗拉多州，一座落基山脉脚下的滑雪小镇', '俄勒冈州，波特兰郊外的一个嬉皮士社区',
+      '亚利桑那州，沙漠中的一个绿洲小镇', '佐治亚州，亚特兰大郊区的一个新兴社区',
+    ],
+    internationalTowns: [
+      '英国，伦敦东区的一个多元文化街区', '日本，东京郊外的一个传统町镇',
+      '中国，四川的一个山间古镇', '韩国，首尔江南区的一个高档社区',
+      '巴西，里约热内卢的一个贫民窟', '印度，孟买的一个老城区',
+      '俄罗斯，莫斯科郊外的一个卫星城', '澳大利亚，悉尼蓝山的一个小镇',
+      '加拿大，温哥华岛上的一个渔村', '南非，开普敦的一个彩色房屋街区',
+    ],
+  }
+};
+
+function generateRandomResidence(era) {
+  const data = RESIDENCE_DATA[era] || RESIDENCE_DATA['1920s'];
+  const categories = Object.values(data);
+  const category = categories[Math.floor(Math.random() * categories.length)];
+  return category[Math.floor(Math.random() * category.length)];
+}
+
+function generateRandomHometown(era) {
+  const data = HOMETOWN_DATA[era] || HOMETOWN_DATA['1920s'];
+  const categories = Object.values(data);
+  const category = categories[Math.floor(Math.random() * categories.length)];
+  return category[Math.floor(Math.random() * category.length)];
+}
+
+// ----- Avatar Functions -----
+const AVATAR_MALE = [
+  'M-01-private-detective.jpg', 'M-02-professor.jpg', 'M-03-sailor.jpg',
+  'M-04-psychiatrist.jpg', 'M-05-antique-dealer.jpg', 'M-06-journalist.jpg',
+  'M-07-veteran.jpg', 'M-08-occultist.jpg', 'M-09-police-detective.jpg',
+  'M-10-artist.jpg'
+];
+const AVATAR_FEMALE = [
+  'F-01-female-detective.jpg', 'F-02-librarian.jpg', 'F-03-medium.jpg',
+  'F-04-nurse.jpg', 'F-05-female-journalist.jpg', 'F-06-paleontologist.jpg',
+  'F-07-tavern-owner.jpg', 'F-08-musician.jpg', 'F-09-criminologist.jpg',
+  'F-10-cult-defector.jpg'
+];
+
+function getAvatarList(gender) {
+  return (gender === '女') ? AVATAR_FEMALE : AVATAR_MALE;
+}
+
+function ensureDefaultAvatar() {
+  if (!state.avatar) {
+    let list = getAvatarList(state.gender);
+    state.avatar = list[Math.floor(Math.random() * list.length)];
+    saveState();
+  }
+}
+
+function avatarImgHtml(file, cls) {
+  return `<img src="assets/avatars/${file}" alt="头像" class="${cls || ''}"
+    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="avatar-fallback" style="display:none"><span>?</span></div>`;
+}
+
+function openAvatarModal() {
+  let avatars = getAvatarList(state.gender);
+  let html = `<div class="avatar-modal" id="avatarModal" onclick="if(event.target===this)closeAvatarModal()">
+    <div class="avatar-modal-content">
+      <div class="avatar-modal-header">
+        <span>选择头像</span>
+        <button class="avatar-modal-close" onclick="closeAvatarModal()">&#10005;</button>
+      </div>
+      <div class="avatar-modal-grid">
+        ${avatars.map(f => `
+          <div class="avatar-option ${f === state.avatar ? 'selected' : ''}"
+            onclick="pickAvatar('${f}')">
+            ${avatarImgHtml(f)}
+            ${f === state.avatar ? '<div class="avatar-check">&#10003;</div>' : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function closeAvatarModal() {
+  let modal = document.getElementById('avatarModal');
+  if (modal) modal.remove();
+}
+
+function pickAvatar(file) {
+  state.avatar = file;
+  saveState();
+  closeAvatarModal();
+  // 刷新头像框
+  let box = document.getElementById('avatarBox');
+  if (box) {
+    box.innerHTML = avatarImgHtml(file);
+    box.dataset.src = file;
+  }
+}
+
+function onGenderChange(val) {
+  state.gender = val;
+  // 切换性别时重置为对应性别的随机头像
+  let list = getAvatarList(val);
+  if (!state.avatar || !list.includes(state.avatar)) {
+    state.avatar = list[Math.floor(Math.random() * list.length)];
+  }
+  saveState();
+  // 刷新头像框
+  let box = document.getElementById('avatarBox');
+  if (box) {
+    box.innerHTML = avatarImgHtml(state.avatar);
+    box.dataset.src = state.avatar;
+  }
+}
+
 // ----- Step 1: Basic Info -----
 function renderStep1(container) {
   // 如果没有名字，自动生成一个
@@ -40,10 +258,32 @@ function renderStep1(container) {
     state.name = generateRandomName();
     saveState();
   }
+  // 如果没有居所/故乡，自动随机生成
+  if (!state.residence) {
+    state.residence = generateRandomResidence(state.era);
+    saveState();
+  }
+  if (!state.hometown) {
+    state.hometown = generateRandomHometown(state.era);
+    saveState();
+  }
+  // 确保有默认头像
+  ensureDefaultAvatar();
+
   container.innerHTML = `
     <div class="card">
       <div class="card-title"><span class="icon">&#9788;</span> 基本信息</div>
       <p class="section-desc">填写调查员的基本个人信息。这些信息将显示在角色卡上。</p>
+
+      <!-- 头像：独立居中 -->
+      <div class="avatar-row">
+        <div class="avatar-box" id="avatarBox" onclick="openAvatarModal()" title="点击更换头像">
+          ${avatarImgHtml(state.avatar)}
+        </div>
+        <div class="avatar-hint">点击更换头像</div>
+      </div>
+
+      <!-- 表单字段：两列网格 -->
       <div class="form-row">
         <div class="form-group">
           <label>调查员姓名</label>
@@ -54,7 +294,7 @@ function renderStep1(container) {
         </div>
         <div class="form-group">
           <label>性别</label>
-          <select id="charGender" onchange="state.gender=this.value;saveState()">
+          <select id="charGender" onchange="onGenderChange(this.value)">
             <option value="男" ${state.gender==='男'?'selected':''}>男</option>
             <option value="女" ${state.gender==='女'?'selected':''}>女</option>
             <option value="其他" ${state.gender==='其他'?'selected':''}>其他</option>
@@ -63,9 +303,31 @@ function renderStep1(container) {
       </div>
       <div class="form-row">
         <div class="form-group">
+          <label>玩家姓名</label>
+          <input type="text" id="playerName" value="${state.playerName || 'COC-PL'}" placeholder="输入玩家姓名..." oninput="state.playerName=this.value;saveState()">
+        </div>
+        <div class="form-group">
           <label>年龄</label>
           <input type="number" id="charAge" value="${state.age}" min="15" max="89" oninput="state.age=clamp(parseInt(this.value)||15,15,89);saveState()">
         </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>居所</label>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="charResidence" value="${state.residence}" placeholder="当前居住地..." style="flex:1;" oninput="state.residence=this.value;saveState()">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('charResidence').value=generateRandomResidence(state.era);state.residence=document.getElementById('charResidence').value;saveState()" title="随机生成居所">🎲</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>故乡</label>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="charHometown" value="${state.hometown}" placeholder="出身地..." style="flex:1;" oninput="state.hometown=this.value;saveState()">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('charHometown').value=generateRandomHometown(state.era);state.hometown=document.getElementById('charHometown').value;saveState()" title="随机生成故乡">🎲</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
         <div class="form-group">
           <label>时代</label>
           <select id="charEra" onchange="onEraChange(this.value)">
@@ -93,6 +355,9 @@ function onEraChange(newEra) {
   if (state.era === newEra) return;
   let oldEra = state.era;
   state.era = newEra;
+  // 重新随机居所和故乡以匹配新时代
+  state.residence = generateRandomResidence(newEra);
+  state.hometown = generateRandomHometown(newEra);
   // 重置职业相关数据
   state.occupation = null;
   state.creditRating = 0;

@@ -1,6 +1,7 @@
 // 步骤路由 - Step Router
 // 包含函数:
 //   - renderStep()  核心路由函数，根据 state.currentStep 调用对应步骤渲染函数
+// 注意: 原 Step 6（衍生属性）已移除，衍生属性在最终角色卡中展示
 
 function renderStep() {
   renderProgressBar();
@@ -12,9 +13,9 @@ function renderStep() {
     case 2: renderStep3(container); break;
     case 3: renderStep4(container); break;
     case 4: renderStep5(container); break;
-    case 5: renderStep6(container); break;
-    case 6: renderStep7(container); break;
-    case 7: renderStep8(container); break;
-    case 8: renderStep9(container); break;
+    // 原 case 5 (renderStep6 衍生属性) 已移除
+    case 5: renderStep7(container); break;
+    case 6: renderStep8(container); break;
+    case 7: renderStep9(container); break;
   }
 }

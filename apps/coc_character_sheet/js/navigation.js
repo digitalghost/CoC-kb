@@ -4,7 +4,188 @@
 //   - prevStep()           上一步
 //   - goToStep(step)       跳转到指定步骤（仅允许跳到已完成或当前步骤）
 //   - resetAll()           重置所有角色数据
-//   - exportCharacter()    导出角色卡为文本文件
+//   - exportCharacter()    导出角色卡为压缩 JSON 文件
+//   - compressState(st)    将 state 压缩为紧凑格式
+//   - decompressState(d)   将紧凑格式还原为 state
+
+// ============================================================
+// 状态压缩/解压 - CoC Character State Codec
+// 版本 1: 属性键映射 + 布尔位掩码 + 技能点压缩 + Base64
+// ============================================================
+
+const ATTR_KEYS = ['STR','CON','SIZ','DEX','APP','INT','POW','EDU'];
+const ATTR_IDX = { STR:0, CON:1, SIZ:2, DEX:3, APP:4, INT:5, POW:6, EDU:7 };
+
+function compressState(st) {
+  // 布尔位掩码: bit0=attrsGenerated, bit1=ageAdjusted, bit2=completed
+  let flags = 0;
+  if (st.attrsGenerated) flags |= 1;
+  if (st.ageAdjusted)   flags |= 2;
+  if (st.completed)     flags |= 4;
+
+  // 属性数组: [STR, CON, SIZ, DEX, APP, INT, POW, EDU]
+  let attrs = ATTR_KEYS.map(k => st.rawAttrs[k] || 0);
+
+  // 衍生属性: [HP, MP, SAN, DB, build, MOV, dodge, language]
+  let d = st.derived;
+  let derived = [d.HP, d.MP, d.SAN, d.DB, d.build, d.MOV, d.dodge, d.language];
+
+  // 技能点: { skillName: "occ,int" } → 只保留有值的
+  let skills = {};
+  for (let k in st.skillPoints) {
+    let p = st.skillPoints[k];
+    if (p.occ > 0 || p.int > 0) skills[k] = p.occ + ',' + p.int;
+  }
+
+  // 背景故事: [{c: category, t: content, k: isKey}]
+  let bg = st.background.map(b => ({
+    c: b.category,
+    t: b.content,
+    k: b.isKey ? 1 : 0
+  }));
+
+  // 同伴: [{n: charName, p: playerName}]
+  let comp = st.companions.map(c => ({ n: c.charName, p: c.playerName }));
+
+  // 装备: [{n: name, t: type, r: price, d: detail}]
+  let equip = st.equipment.map(e => ({ n: e.name, t: e.type, r: e.price, d: e.detail || '' }));
+
+  // 武器: 完整保留
+  let wpns = st.weapons || [];
+
+  // 职业: 只保留名称
+  let occ = st.occupation ? st.occupation.name : null;
+
+  // 构建紧凑对象
+  let compact = {
+    v: 1,
+    f: flags,
+    s: {  // step 1
+      n: st.name,
+      p: st.playerName || 'COC-PL',
+      r: st.residence || '',
+      h: st.hometown || '',
+      a: st.age,
+      g: st.gender,
+      e: st.era,
+      av: st.avatar || ''
+    },
+    at: attrs,       // rawAttrs
+    l: st.luck,      // luck
+    ac: st.ageAdjustChoice,  // ageAdjustChoice
+    el: st.eduGrowthLog || [],  // eduGrowthLog
+    o: occ,           // occupation name
+    cr: st.creditRating,
+    os: st.selectedOccSkills || [],
+    fs: st.fixedSpecialtyChoices || {},
+    cg: st.customSkillGroups || {},
+    cf: st.customOccForm || { name:'', creditRatingMin:0, creditRatingMax:99, occupationalPoints:0, selectedSkills:[] },
+    op: st.occupationalPoints,
+    ip: st.interestPoints,
+    ou: st.occupationalUsed,
+    iu: st.interestUsed,
+    sk: skills,       // skillPoints (compressed)
+    dv: derived,      // derived
+    bg: bg,           // background
+    kc: st.keyConnection,
+    cp: comp,         // companions
+    eq: equip,        // equipment
+    wp: wpns,         // weapons
+    sc: st.spendingCash
+  };
+
+  return compact;
+}
+
+function decompressState(d) {
+  if (!d || d.v !== 1) return null;
+
+  // 还原布尔位掩码
+  let flags = d.f || 0;
+
+  // 还原属性
+  let rawAttrs = {};
+  ATTR_KEYS.forEach((k, i) => { rawAttrs[k] = d.at[i] || 0; });
+
+  // 还原技能点
+  let skillPoints = {};
+  if (d.sk) {
+    for (let k in d.sk) {
+      let parts = String(d.sk[k]).split(',');
+      skillPoints[k] = { occ: parseInt(parts[0]) || 0, int: parseInt(parts[1]) || 0 };
+    }
+  }
+
+  // 还原背景故事
+  let background = (d.bg || []).map(b => ({
+    category: b.c,
+    content: b.t,
+    isKey: !!b.k
+  }));
+
+  // 还原同伴
+  let companions = (d.cp || []).map(c => ({
+    charName: c.n || '',
+    playerName: c.p || ''
+  }));
+
+  // 还原装备
+  let equipment = (d.eq || []).map(e => ({
+    name: e.n,
+    type: e.t,
+    price: e.r || 0,
+    detail: e.d || ''
+  }));
+
+  // 还原职业对象（从 OCCUPATIONS 数组查找）
+  let occupation = null;
+  if (d.o) {
+    occupation = OCCUPATIONS.find(o => o.name === d.o) || { name: d.o };
+  }
+
+  // 还原衍生属性
+  let dv = d.dv || [0,0,0,'0',0,9,0,0];
+  let derived = { HP: dv[0], MP: dv[1], SAN: dv[2], DB: dv[3], build: dv[4], MOV: dv[5], dodge: dv[6], language: dv[7] };
+
+  return {
+    currentStep: 7,
+    name: d.s.n || '',
+    playerName: d.s.p || 'COC-PL',
+    residence: d.s.r || '',
+    hometown: d.s.h || '',
+    age: d.s.a || 25,
+    gender: d.s.g || '男',
+    era: d.s.e || '1920s',
+    avatar: d.s.av || '',
+    rawAttrs,
+    luck: d.l || 0,
+    attrsGenerated: !!(flags & 1),
+    ageAdjusted: !!(flags & 2),
+    ageAdjustChoice: d.ac || 'STR',
+    eduGrowthLog: d.el || [],
+    occupation,
+    creditRating: d.cr || 0,
+    selectedOccSkills: d.os || [],
+    fixedSpecialtyChoices: d.fs || {},
+    customSkillGroups: d.cg || {},
+    customOccForm: d.cf || { name:'', creditRatingMin:0, creditRatingMax:99, occupationalPoints:0, selectedSkills:[] },
+    occupationalPoints: d.op || 0,
+    interestPoints: d.ip || 0,
+    occupationalUsed: d.ou || 0,
+    interestUsed: d.iu || 0,
+    skillPoints,
+    derived,
+    background,
+    keyConnection: d.kc !== undefined ? d.kc : -1,
+    companions,
+    equipment,
+    weapons: d.wp || [
+      { name: '徒手（拳打脚踢）', skill: '格斗(斗殴)', damage: '1D3+DB', armorPiercing: false, baseRange: '接触', attacksPerRound: '1', capacity: '-', malfunction: null, price20s: null, priceModern: null, era: '默认', category: '常规武器' }
+    ],
+    spendingCash: d.sc || 0,
+    completed: !!(flags & 4)
+  };
+}
 
 function nextStep() {
   // Validation
@@ -65,7 +246,7 @@ function nextStep() {
     }
   }
 
-  if (state.currentStep < 8) {
+  if (state.currentStep < 7) {
     state.currentStep++;
     saveState();
     renderStep();
@@ -97,7 +278,8 @@ function resetAll() {
     localStorage.removeItem('coc_char_state');
     state = {
       currentStep: 0,
-      name: '', age: 25, gender: '男', era: '1920s',
+      name: '', playerName: 'COC-PL', residence: '', hometown: '',
+      age: 25, gender: '男', avatar: '', era: '1920s',
       rawAttrs: { STR: 0, CON: 0, SIZ: 0, DEX: 0, APP: 0, INT: 0, POW: 0, EDU: 0 },
       luck: 0,
       attrsGenerated: false,
@@ -108,6 +290,7 @@ function resetAll() {
       derived: { HP: 0, MP: 0, SAN: 0, DB: '0', build: 0, MOV: 9, dodge: 0, language: 0 },
       background: [],
       keyConnection: -1,
+      companions: [],
       equipment: [],
       spendingCash: 0,
       completed: false
@@ -119,83 +302,27 @@ function resetAll() {
 
 function exportCharacter() {
   calcDerived();
-  let attrs = getEffectiveAttrs();
-  let d = state.derived;
-  let text = `=== 克苏鲁的呼唤 第七版 调查员角色卡 ===\n\n`;
-  text += `姓名: ${state.name}\n`;
-  text += `年龄: ${state.age} | 性别: ${state.gender} | 时代: ${state.era}\n`;
-  text += `职业: ${state.occupation ? state.occupation.name : '未选择'} | 信用评级: ${state.creditRating}\n\n`;
-  text += `--- 属性 ---\n`;
-  ['STR','CON','SIZ','DEX','APP','INT','POW','EDU'].forEach(k => {
-    text += `${k}: ${attrs[k]} (半值:${Math.floor(attrs[k]/2)} 五分之一:${Math.floor(attrs[k]/5)})\n`;
-  });
-  text += `幸运值: ${state.luck}\n\n`;
-  text += `--- 衍生属性 ---\n`;
-  text += `HP: ${d.HP} | MP: ${d.MP} | SAN: ${d.SAN} | DB: ${d.DB} | 体格: ${d.build} | MOV: ${d.MOV} | 闪避: ${d.dodge} | 母语: ${d.language}\n\n`;
-  text += `--- 技能 ---\n`;
-  // 使用专精展开格式导出技能
-  let categories = getDisplaySkillCategories();
-  categories.forEach(cat => {
-    cat.skills.forEach(name => {
-      let base = getSkillBase(name, attrs);
-      let pts = state.skillPoints[name] || { occ: 0, int: 0 };
-      let total = base + pts.occ + pts.int;
-      if (total > base) {
-        text += `${name}: ${total}`;
-        if (pts.occ > 0) text += ` (职业+${pts.occ})`;
-        if (pts.int > 0) text += ` (兴趣+${pts.int})`;
-        text += `\n`;
-      }
-    });
-  });
-  // 导出自由输入型专精技能
-  for (let sk in state.skillPoints) {
-    let pts = state.skillPoints[sk];
-    if ((pts.occ > 0 || pts.int > 0) && isSpecialtySkill(sk)) {
-      let parent = getParentFromSpecialty(sk);
-      if (parent && SPECIALTY_MAP[parent] && SPECIALTY_MAP[parent].freeForm) {
-        let base = getSkillBase(sk, attrs);
-        let total = base + pts.occ + pts.int;
-        text += `${sk}: ${total}`;
-        if (pts.occ > 0) text += ` (职业+${pts.occ})`;
-        if (pts.int > 0) text += ` (兴趣+${pts.int})`;
-        text += `\n`;
-      }
-    }
-  }
-  let bgEntries = state.background.filter(b => b.content && b.content.trim());
-  if (bgEntries.length > 0) {
-    text += `\n--- 背景故事 ---\n`;
-    state.background.forEach((item, idx) => {
-      if (item.content && item.content.trim()) {
-        let prefix = idx === state.keyConnection ? '⭐ ' : '- ';
-        text += `${prefix}[${item.category}] ${item.content}\n`;
-      }
-    });
-  }
 
-  // Equipment
-  if (state.equipment.length > 0) {
-    let totalSpent = getEquipmentTotalSpent();
-    let crInfo = getCreditRatingInfo(state.creditRating);
-    text += `\n--- 随身物品 ---\n`;
-    text += `信用评级: ${state.creditRating} (${crInfo.level}) | 资产: ${crInfo.assets}\n`;
-    state.equipment.forEach(item => {
-      text += `- ${item.name}`;
-      if (item.type && item.type !== '自定义') text += ` [${item.type}]`;
-      if (item.price > 0) text += ` ($${item.price.toFixed(2)})`;
-      text += `\n`;
-    });
-    text += `可支配现金: $${(state.spendingCash - totalSpent).toFixed(2)} (已花费 $${totalSpent.toFixed(2)} / $${state.spendingCash.toFixed(2)})\n`;
-  }
+  // 压缩完整 state 数据
+  let compact = compressState(state);
+  let jsonStr = JSON.stringify(compact);
 
-  // Create download
-  let blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  // Base64 编码，增加不可读性
+  let encoded = btoa(unescape(encodeURIComponent(jsonStr)));
+
+  // 构建导出文件内容: 轻量头部 + 编码数据
+  let exportData = {
+    _format: 'coc7-char-v1',
+    _app: 'coc-character-sheet',
+    _encoded: encoded
+  };
+
+  let blob = new Blob([JSON.stringify(exportData)], { type: 'application/json;charset=utf-8' });
   let url = URL.createObjectURL(blob);
   let a = document.createElement('a');
   a.href = url;
-  a.download = `${state.name || '调查员'}_角色卡.txt`;
+  a.download = `${state.name || '调查员'}_角色卡.coc7`;
   a.click();
   URL.revokeObjectURL(url);
-  notify('角色卡已导出', 'success');
+  notify('角色卡已导出（.coc7 格式）', 'success');
 }
