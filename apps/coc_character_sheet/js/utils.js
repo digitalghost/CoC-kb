@@ -204,14 +204,14 @@ function getDisplaySkillCategories() {
   let standardSkills = new Set();
   let standardCats = [
     { title: '常规技能', skills: Object.keys(SKILLS_DATA.regular).filter(filterSkill) },
-    { title: '格斗专攻', skills: Object.keys(SKILLS_DATA.combat).map(s => '格斗(' + s + ')').filter(filterSkill) },
-    { title: '射击专攻', skills: Object.keys(SKILLS_DATA.firearms).map(s => '射击(' + s + ')').filter(filterSkill) },
-    { title: '科学专攻', skills: Object.keys(SKILLS_DATA.science).map(s => '科学(' + s + ')').filter(filterSkill) },
-    buildFreeFormCategory('艺术和手艺专攻', '艺术和手艺'),
-    buildFreeFormCategory('语言专攻', '语言'),
-    buildFreeFormCategory('生存专攻', '生存'),
-    buildFreeFormCategory('操纵专攻', '操纵'),
-    buildFreeFormCategory('学识专攻', '学识'),
+    { title: '格斗专攻', parentName: '格斗', skills: Object.keys(SKILLS_DATA.combat).map(s => '格斗(' + s + ')').filter(filterSkill) },
+    { title: '射击专攻', parentName: '射击', skills: Object.keys(SKILLS_DATA.firearms).map(s => '射击(' + s + ')').filter(filterSkill) },
+    { title: '科学专攻', parentName: '科学', skills: Object.keys(SKILLS_DATA.science).map(s => '科学(' + s + ')').filter(filterSkill) },
+    Object.assign(buildFreeFormCategory('艺术和手艺专攻', '艺术和手艺'), { parentName: '艺术和手艺' }),
+    Object.assign(buildFreeFormCategory('语言专攻', '语言'), { parentName: '语言' }),
+    Object.assign(buildFreeFormCategory('生存专攻', '生存'), { parentName: '生存' }),
+    Object.assign(buildFreeFormCategory('操纵专攻', '操纵'), { parentName: '操纵' }),
+    Object.assign(buildFreeFormCategory('学识专攻', '学识'), { parentName: '学识' }),
   ];
   standardCats.forEach(cat => cat.skills.forEach(s => standardSkills.add(s)));
 

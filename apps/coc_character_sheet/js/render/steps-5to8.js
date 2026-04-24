@@ -54,9 +54,18 @@ function renderStep5(container) {
   const categories = getDisplaySkillCategories();
 
   categories.forEach(cat => {
+    // 空的专攻分类（如"学识"未被选择任何子技能）不显示
+    if (cat.skills.length === 0) return;
+    // 专攻分类标题：强调父技能名，弱化"专攻"二字
+    let titleHtml;
+    if (cat.parentName) {
+      titleHtml = `<span class="cat-parent-name">${cat.parentName}</span><span class="cat-suffix">专攻</span>`;
+    } else {
+      titleHtml = cat.title;
+    }
     html += `<div class="skill-category">
       <div class="skill-category-title" onclick="this.nextElementSibling.classList.toggle('hidden')">
-        ${cat.title} <span class="toggle">&#9660;</span>
+        ${titleHtml} <span class="toggle">&#9660;</span>
       </div>
       <table class="skill-table">
         <tr><th>技能</th><th>基础值</th><th>职业点</th><th>兴趣点</th><th>总计</th></tr>
@@ -67,16 +76,25 @@ function renderStep5(container) {
       let pts = state.skillPoints[name] || { occ: 0, int: 0 };
       let total = base + pts.occ + pts.int;
       let occTag = isOcc ? '<span class="tag-occ">职</span>' : '';
+      // 专攻分类中技能名只显示子名（去掉父技能前缀）
+      let displayName = name;
+      if (cat.parentName && name.startsWith(cat.parentName + '(') && name.endsWith(')')) {
+        displayName = name.slice(cat.parentName.length + 1, -1);
+      }
       // 非职业技能的职业点滑块禁用（wiki 规则：本职技能点只能投入职业技能）
       let occSlider = isOcc
         ? makeSkillSlider(name, 'occ', pts.occ, base)
         : `<span class="slider-disabled">—</span>`;
       html += `<tr data-skill="${name}">
-        <td class="skill-name">${name} ${occTag}</td>
+        <td class="skill-name">${displayName} ${occTag}</td>
         <td class="skill-base">${base}</td>
         <td>${occSlider}</td>
         <td>${makeSkillSlider(name,'int',pts.int,base)}</td>
-        <td class="skill-total">${total}</td>
+        <td><div class="check-cell-inline">
+          <div class="ck-main">${total}</div>
+          <div class="ck-half">${Math.floor(total/2)}</div>
+          <div class="ck-fifth">${Math.floor(total/5)}</div>
+        </div></td>
       </tr>`;
     });
     html += `</table></div>`;
@@ -116,12 +134,17 @@ function sliderInputCommit(inputEl) {
   updateSkillPoint(skillName, type, val);
   // 同步显示
   inputEl.value = state.skillPoints[skillName][type];
-  // 更新该行总计
+  // 更新该行总计（check-cell 组件）
   let row = sliderEl.closest('tr');
   if (row) {
     let base = parseInt(sliderEl.dataset.base) || 0;
-    let totalEl = row.querySelector('.skill-total');
-    if (totalEl) totalEl.textContent = base + state.skillPoints[skillName].occ + state.skillPoints[skillName].int;
+    let total = base + state.skillPoints[skillName].occ + state.skillPoints[skillName].int;
+    let ckMain = row.querySelector('.ck-main');
+    let ckHalf = row.querySelector('.ck-half');
+    let ckFifth = row.querySelector('.ck-fifth');
+    if (ckMain) ckMain.textContent = total;
+    if (ckHalf) ckHalf.textContent = Math.floor(total / 2);
+    if (ckFifth) ckFifth.textContent = Math.floor(total / 5);
   }
   updatePointsDisplay();
 }
@@ -187,11 +210,16 @@ function sliderApply(el, delta) {
   // 局部更新 UI（不重新渲染整个页面）
   let valEl = el.querySelector('.slider-val');
   if (valEl) valEl.value = newVal;
-  // 更新该行的总计
+  // 更新该行的总计（check-cell 组件）
   let row = el.closest('tr');
   if (row) {
-    let totalEl = row.querySelector('.skill-total');
-    if (totalEl) totalEl.textContent = base + state.skillPoints[skillName].occ + state.skillPoints[skillName].int;
+    let total = base + state.skillPoints[skillName].occ + state.skillPoints[skillName].int;
+    let ckMain = row.querySelector('.ck-main');
+    let ckHalf = row.querySelector('.ck-half');
+    let ckFifth = row.querySelector('.ck-fifth');
+    if (ckMain) ckMain.textContent = total;
+    if (ckHalf) ckHalf.textContent = Math.floor(total / 2);
+    if (ckFifth) ckFifth.textContent = Math.floor(total / 5);
   }
   // 更新剩余点数显示
   updatePointsDisplay();
@@ -303,8 +331,11 @@ function renderStep6(container) {
     html += `
       <div class="attr-item">
         <div class="attr-name">${k}</div>
-        <div class="attr-value">${eff}</div>
-        <div class="attr-half">半值:${Math.floor(eff/2)} 五分之一:${Math.floor(eff/5)}</div>
+        <div class="check-cell">
+          <div class="ck-main">${eff}</div>
+          <div class="ck-half">${Math.floor(eff/2)}</div>
+          <div class="ck-fifth">${Math.floor(eff/5)}</div>
+        </div>
       </div>
     `;
   });
@@ -313,7 +344,11 @@ function renderStep6(container) {
       <div style="text-align:center;margin-top:12px;">
         <div class="attr-item" style="display:inline-block;">
           <div class="attr-name">幸运值</div>
-          <div class="attr-value">${state.luck}</div>
+          <div class="check-cell">
+            <div class="ck-main">${state.luck}</div>
+            <div class="ck-half">${Math.floor(state.luck/2)}</div>
+            <div class="ck-fifth">${Math.floor(state.luck/5)}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -752,12 +787,14 @@ function renderStep7(container) {
   container.innerHTML = html;
 }
 
-// ----- Step 8: Equipment -----
+// ----- Step 8: Equipment & Weapons -----
 // 装备步骤相关状态
 let _equipActiveCategory = null; // 当前展开的分类标签
 let _equipSearchTimeout = null;
+let _weaponActiveCategory = null; // 当前展开的武器分类标签
+let _weaponSearchTimeout = null;
 
-function addEquipment(name, price, type) {
+function addEquipment(name, price, type, priceDisplay) {
   if (!name || !name.trim()) {
     notify('请输入物品名称', 'error');
     return;
@@ -766,7 +803,9 @@ function addEquipment(name, price, type) {
   if (price < 0) price = 0;
   type = type || '日常用品';
 
-  state.equipment.push({ name: name.trim(), type, price, detail: '' });
+  let item = { name: name.trim(), type, price, detail: '' };
+  if (priceDisplay) item.priceDisplay = priceDisplay;
+  state.equipment.push(item);
   saveState();
   renderStep();
   notify('已添加: ' + name.trim(), 'success');
@@ -778,6 +817,27 @@ function removeEquipment(idx) {
   saveState();
   renderStep();
   notify('已移除: ' + removed.name, 'info');
+}
+
+function addWeapon(weaponData) {
+  // 检查是否已添加同名武器
+  let exists = state.weapons.some(w => w.name === weaponData.name);
+  if (exists) {
+    notify('该武器已添加', 'error');
+    return;
+  }
+  state.weapons.push({ ...weaponData });
+  saveState();
+  renderStep();
+  notify('已添加武器: ' + weaponData.name, 'success');
+}
+
+function removeWeapon(idx) {
+  if (idx < 0 || idx >= state.weapons.length) return;
+  let removed = state.weapons.splice(idx, 1)[0];
+  saveState();
+  renderStep();
+  notify('已移除武器: ' + removed.name, 'info');
 }
 
 function renderEquipmentSuggestions(query) {
@@ -812,10 +872,11 @@ function renderEquipmentSuggestions(query) {
       <div class="equip-suggestion-items">`;
     grouped[cat].forEach(item => {
       let alreadyAdded = state.equipment.some(e => e.name === item.name);
+      let pd = item.priceDisplay ? `'${item.priceDisplay.replace(/'/g, "\\'")}'` : '';
       html += `<div class="equip-suggestion-item ${alreadyAdded ? 'already-added' : ''}"
-        onclick="${alreadyAdded ? '' : `addEquipment('${item.name.replace(/'/g, "\\'")}', ${item.price}, '${item.category}'); document.getElementById('equipSearchInput').value='';`}">
+        onclick="${alreadyAdded ? '' : `addEquipment('${item.name.replace(/'/g, "\\'")}', ${item.price}, '${item.category}', ${pd}); document.getElementById('equipSearchInput').value='';`}">
         <span class="esi-name">${item.name}</span>
-        <span class="esi-price">$${item.price.toFixed(2)}</span>
+        <span class="esi-price">${item.priceDisplay || '$' + item.price.toFixed(2)}</span>
         ${alreadyAdded ? '<span class="esi-added-tag">已添加</span>' : ''}
       </div>`;
     });
@@ -847,10 +908,11 @@ function renderEquipmentCategoryBrowse(container) {
     itemsHtml += `<div class="equip-category-grid">`;
     items.forEach(item => {
       let alreadyAdded = state.equipment.some(e => e.name === item.name);
+      let pd = item.priceDisplay ? `'${item.priceDisplay.replace(/'/g, "\\'")}'` : '';
       itemsHtml += `<div class="equip-cat-item ${alreadyAdded ? 'already-added' : ''}"
-        onclick="${alreadyAdded ? '' : `addEquipment('${item.name.replace(/'/g, "\\'")}', ${item.price}, '${item.category}');`}">
+        onclick="${alreadyAdded ? '' : `addEquipment('${item.name.replace(/'/g, "\\'")}', ${item.price}, '${item.category}', ${pd});`}">
         <span class="eci-name">${item.name}</span>
-        <span class="eci-price">$${item.price.toFixed(2)}</span>
+        <span class="eci-price">${item.priceDisplay || '$' + item.price.toFixed(2)}</span>
         ${alreadyAdded ? '<span class="eci-added-tag">已添加</span>' : ''}
       </div>`;
     });
@@ -895,18 +957,14 @@ function renderStep8(container) {
     saveState();
   }
 
-  // 如果信用评级变化了，更新 spendingCash（仅当未手动修改时）
-  let totalSpent = getEquipmentTotalSpent();
-  let remaining = state.spendingCash - totalSpent;
-
   let html = `
     <div class="card">
       <div class="card-title"><span class="icon">&#128230;</span> 决定装备</div>
       <p class="section-desc">
-        调查员的日常生活水平取决于其信用评级。根据信用评级确定可支配现金和资产，为调查员选择随身携带的物品、武器和装备。
+        为调查员选择随身携带的物品和武器。道具和武器不与可支配现金关联。
       </p>
 
-      <!-- 信用评级信息 -->
+      <!-- 信用评级信息（仅展示） -->
       <div class="equip-credit-info">
         <div class="eci-row">
           <div class="eci-label">信用评级</div>
@@ -921,6 +979,9 @@ function renderStep8(container) {
           <div class="eci-value">${crInfo.assets}</div>
         </div>
       </div>
+
+      <!-- ===== 道具管理 ===== -->
+      <div class="equip-section-title">&#128230; 管理道具</div>
 
       <!-- 添加物品 -->
       <div class="equip-search-box">
@@ -958,21 +1019,94 @@ function renderStep8(container) {
         <span class="ei-icon">${icon}</span>
         <span class="ei-name">${item.name}</span>
         <span class="ei-type">${item.type}</span>
-        <span class="ei-price">$${item.price.toFixed(2)}</span>
+        <span class="ei-price">${item.priceDisplay || '$' + item.price.toFixed(2)}</span>
         <button class="ei-remove" onclick="removeEquipment(${idx})">&#10005;</button>
       </div>`;
     });
   }
 
+  html += `</div>`;
+
+  // ===== 武器管理 =====
   html += `
-        <div class="equip-summary">
-          <span class="equip-spent-label">&#128176; 已花费</span>
-          <span class="equip-spent-value ${remaining < 0 ? 'over-budget' : ''}">$${totalSpent.toFixed(2)} / $${state.spendingCash.toFixed(2)}</span>
-          <span class="equip-remaining">剩余: $${remaining.toFixed(2)}</span>
+      <div class="equip-section-title" style="margin-top:24px;">&#9876; 管理武器</div>
+      <p class="section-desc" style="margin-bottom:12px;">
+        武器拥有额外的战斗属性（技能、伤害、射程等）。点击武器可查看详情并添加。
+      </p>
+
+      <!-- 武器搜索和浏览 -->
+      <div class="equip-search-box">
+        <div class="equip-search-header">
+          <div class="equip-search-input-wrap">
+            <span class="equip-search-icon">&#128269;</span>
+            <input type="text" id="weaponSearchInput" class="equip-search-input"
+              placeholder="搜索武器名称..."
+              oninput="onWeaponSearchInput(this.value)"
+              onfocus="onWeaponSearchInput(this.value)">
+          </div>
+        </div>
+        <div id="weaponSuggestions" class="equip-suggestions hidden"></div>
+        <div id="weaponCategoryItems" class="equip-category-items hidden"></div>
+      </div>
+
+      <!-- 自定义武器添加 -->
+      <div class="weapon-custom-add">
+        <div class="weapon-custom-add-title">&#10010; 添加自定义武器</div>
+        <div class="weapon-custom-row">
+          <input type="text" id="wcName" placeholder="武器名称" class="wc-input wc-name">
+          <input type="text" id="wcSkill" placeholder="技能" class="wc-input wc-skill">
+          <input type="text" id="wcDamage" placeholder="伤害" class="wc-input wc-damage">
+        </div>
+        <div class="weapon-custom-row">
+          <input type="text" id="wcRange" placeholder="基础射程" class="wc-input wc-range">
+          <input type="text" id="wcAPR" placeholder="每轮" class="wc-input wc-apr">
+          <input type="text" id="wcCapacity" placeholder="弹容量" class="wc-input wc-cap">
+          <input type="text" id="wcMalfunction" placeholder="故障值" class="wc-input wc-mal">
+          <input type="text" id="wcPrice" placeholder="价格" class="wc-input wc-price">
+          <label class="wc-ap-check"><input type="checkbox" id="wcAP"> 贯穿</label>
+        </div>
+        <div class="weapon-custom-row">
+          <input type="text" id="wcCategory" placeholder="分类（如：手枪、近战武器）" class="wc-input wc-cat-input">
+          <button class="btn btn-accent btn-sm" onclick="addCustomWeapon()">添加武器</button>
         </div>
       </div>
-    </div>
+
+      <!-- 我的武器 -->
+      <div class="equip-my-items">
+        <div class="equip-my-items-title">&#9876; 我的武器</div>
   `;
+
+  if (state.weapons.length === 0) {
+    html += `<div class="equip-empty">尚未添加任何武器。请搜索、浏览武器库或自定义添加。</div>`;
+  } else {
+    let era = state.era || '1920s';
+    html += `<div class="weapon-table-wrap"><table class="weapon-table">
+      <thead><tr>
+        <th>名称</th><th>分类</th><th>技能</th><th>伤害</th><th>射程</th><th>每轮</th><th>弹容量</th><th>故障</th><th>价格</th><th></th>
+      </tr></thead><tbody>`;
+    state.weapons.forEach((weapon, idx) => {
+      let isDetailed = weapon.skill !== undefined;
+      let price = isDetailed ? (era === '现代' ? weapon.priceModern : weapon.price20s) : (typeof weapon.price === 'number' ? weapon.price : weapon.price);
+      let priceDisplay = (price === null || price === undefined) ? '-' : (typeof price === 'number' ? '$' + price.toFixed(2) : price);
+      let apDisplay = isDetailed && weapon.armorPiercing ? '&#10003;' : '-';
+      let malDisplay = isDetailed && weapon.malfunction ? weapon.malfunction : '-';
+      html += `<tr>
+        <td class="wt-name">${weapon.name}</td>
+        <td>${weapon.category || '-'}</td>
+        <td>${isDetailed ? weapon.skill : '-'}</td>
+        <td class="wt-damage">${isDetailed ? weapon.damage : '-'}</td>
+        <td>${isDetailed ? (weapon.baseRange || '-') : '-'}</td>
+        <td>${isDetailed ? (weapon.attacksPerRound || '-') : '-'}</td>
+        <td>${isDetailed ? (weapon.capacity || '-') : '-'}</td>
+        <td>${malDisplay}</td>
+        <td class="wt-price">${priceDisplay}</td>
+        <td><button class="ei-remove" onclick="removeWeapon(${idx})">&#10005;</button></td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  }
+
+  html += `</div></div>`;
 
   container.innerHTML = html;
 }
@@ -998,6 +1132,155 @@ function addCustomEquipment() {
   addEquipment(name, price, '自定义');
   nameEl.value = '';
   if (priceEl) priceEl.value = '';
+}
+
+// ----- Weapon Search & Browse -----
+function onWeaponSearchInput(value) {
+  clearTimeout(_weaponSearchTimeout);
+  _weaponActiveCategory = null;
+  _weaponSearchTimeout = setTimeout(() => {
+    renderWeaponSuggestions(value);
+  }, 150);
+}
+
+function renderWeaponSuggestions(query) {
+  let container = document.getElementById('weaponSuggestions');
+  if (!container) return;
+
+  if (!query || !query.trim()) {
+    renderWeaponCategoryBrowse(container);
+    return;
+  }
+
+  let results = searchWeapons(query);
+  if (results.length === 0) {
+    container.innerHTML = `<div class="equip-suggestion-empty">未找到匹配武器</div>`;
+    container.classList.remove('hidden');
+    return;
+  }
+
+  // 按分类分组
+  let grouped = {};
+  results.forEach(item => {
+    if (!grouped[item.category]) grouped[item.category] = [];
+    grouped[item.category].push(item);
+  });
+
+  let html = '';
+  for (let cat in grouped) {
+    let icon = WEAPON_CATEGORY_ICONS[cat] || '&#9876;';
+    html += `<div class="equip-suggestion-group">
+      <div class="equip-suggestion-cat">${icon} ${cat}</div>
+      <div class="equip-suggestion-items">`;
+    grouped[cat].forEach(item => {
+      let alreadyAdded = state.weapons.some(w => w.name === item.name);
+      let isDetailed = item.skill !== undefined;
+      let detailHtml = isDetailed
+        ? `<span class="ws-detail">${item.damage}${item.armorPiercing ? ' &#10003;' : ''}</span>`
+        : '';
+      html += `<div class="equip-suggestion-item weapon-suggestion-item ${alreadyAdded ? 'already-added' : ''}"
+        onclick="${alreadyAdded ? '' : `addWeapon(${JSON.stringify(item).replace(/"/g, '&quot;')})`}">
+        <span class="esi-name">${item.name}</span>
+        ${detailHtml}
+        ${alreadyAdded ? '<span class="esi-added-tag">已添加</span>' : ''}
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+  container.innerHTML = html;
+  container.classList.remove('hidden');
+}
+
+function renderWeaponCategoryBrowse(container) {
+  let categories = getWeaponCategories();
+  let html = '<div class="equip-category-tabs">';
+  categories.forEach(cat => {
+    let icon = WEAPON_CATEGORY_ICONS[cat] || '&#9876;';
+    let isActive = _weaponActiveCategory === cat;
+    html += `<button class="equip-cat-tab ${isActive ? 'active' : ''}"
+      onclick="toggleWeaponCategory('${cat}')">${icon} ${cat}</button>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+  container.classList.remove('hidden');
+
+  let itemsContainer = document.getElementById('weaponCategoryItems');
+  if (itemsContainer && _weaponActiveCategory) {
+    let items = getCurrentWeaponsDB()[_weaponActiveCategory] || [];
+    let icon = WEAPON_CATEGORY_ICONS[_weaponActiveCategory] || '&#9876;';
+    let itemsHtml = `<div class="equip-category-header">${icon} ${_weaponActiveCategory}</div>`;
+    itemsHtml += `<div class="equip-category-grid">`;
+    items.forEach(item => {
+      let alreadyAdded = state.weapons.some(w => w.name === item.name);
+      let isDetailed = item.skill !== undefined;
+      let detailHtml = isDetailed
+        ? `<span class="eci-detail">${item.damage}${item.armorPiercing ? ' &#10003;' : ''}</span>`
+        : '';
+      itemsHtml += `<div class="equip-cat-item weapon-cat-item ${alreadyAdded ? 'already-added' : ''}"
+        onclick="${alreadyAdded ? '' : `addWeapon(${JSON.stringify(item).replace(/"/g, '&quot;')})`}">
+        <span class="eci-name">${item.name}</span>
+        ${detailHtml}
+        ${alreadyAdded ? '<span class="eci-added-tag">已添加</span>' : ''}
+      </div>`;
+    });
+    itemsHtml += `</div>`;
+    itemsContainer.innerHTML = itemsHtml;
+    itemsContainer.classList.remove('hidden');
+  } else if (itemsContainer) {
+    itemsContainer.innerHTML = '';
+    itemsContainer.classList.add('hidden');
+  }
+}
+
+function toggleWeaponCategory(cat) {
+  _weaponActiveCategory = (_weaponActiveCategory === cat) ? null : cat;
+  let container = document.getElementById('weaponSuggestions');
+  if (container) renderWeaponCategoryBrowse(container);
+}
+
+function addCustomWeapon() {
+  let nameEl = document.getElementById('wcName');
+  if (!nameEl) return;
+  let name = nameEl.value.trim();
+  if (!name) {
+    notify('请输入武器名称', 'error');
+    return;
+  }
+  let skill = (document.getElementById('wcSkill').value || '').trim() || '格斗(斗殴)';
+  let damage = (document.getElementById('wcDamage').value || '').trim() || '1D6+DB';
+  let baseRange = (document.getElementById('wcRange').value || '').trim() || '接触';
+  let attacksPerRound = (document.getElementById('wcAPR').value || '').trim() || '1';
+  let capacity = (document.getElementById('wcCapacity').value || '').trim() || '-';
+  let malfunctionVal = (document.getElementById('wcMalfunction').value || '').trim();
+  let malfunction = malfunctionVal ? parseInt(malfunctionVal) : null;
+  let priceVal = (document.getElementById('wcPrice').value || '').trim();
+  let price = priceVal ? parseFloat(priceVal) : null;
+  let armorPiercing = document.getElementById('wcAP').checked;
+  let category = (document.getElementById('wcCategory').value || '').trim() || '常规武器';
+
+  let weapon = {
+    name,
+    skill,
+    damage,
+    armorPiercing,
+    baseRange,
+    attacksPerRound,
+    capacity,
+    malfunction,
+    price20s: price,
+    priceModern: price,
+    era: '自定义',
+    category,
+  };
+
+  addWeapon(weapon);
+
+  // 清空输入
+  ['wcName','wcSkill','wcDamage','wcRange','wcAPR','wcCapacity','wcMalfunction','wcPrice','wcCategory'].forEach(id => {
+    let el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('wcAP').checked = false;
 }
 
 // ----- Step 9: Final Character Sheet -----
@@ -1036,9 +1319,12 @@ function renderStep9(container) {
     html += `
       <div class="attr-item">
         <div class="attr-name">${k}</div>
-        <div class="attr-value editable" contenteditable="true"
-          oninput="state.rawAttrs['${k}']=clamp(parseInt(this.textContent)||0,0,99);saveState();recalcAndRender()">${attrs[k]}</div>
-        <div class="attr-half">半值:${Math.floor(attrs[k]/2)} 五分之一:${Math.floor(attrs[k]/5)}</div>
+        <div class="check-cell">
+          <div class="ck-main editable" contenteditable="true"
+            oninput="state.rawAttrs['${k}']=clamp(parseInt(this.textContent)||0,0,99);saveState();recalcAndRender()">${attrs[k]}</div>
+          <div class="ck-half">${Math.floor(attrs[k]/2)}</div>
+          <div class="ck-fifth">${Math.floor(attrs[k]/5)}</div>
+        </div>
       </div>
     `;
   });
@@ -1047,8 +1333,12 @@ function renderStep9(container) {
         <div style="text-align:center;margin-top:12px;">
           <div class="attr-item" style="display:inline-block;">
             <div class="attr-name">幸运值</div>
-            <div class="attr-value editable" contenteditable="true"
-              oninput="state.luck=clamp(parseInt(this.textContent)||0,0,99);saveState()">${state.luck}</div>
+            <div class="check-cell">
+              <div class="ck-main editable" contenteditable="true"
+                oninput="state.luck=clamp(parseInt(this.textContent)||0,0,99);saveState()">${state.luck}</div>
+              <div class="ck-half">${Math.floor(state.luck/2)}</div>
+              <div class="ck-fifth">${Math.floor(state.luck/5)}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1091,8 +1381,15 @@ function renderStep9(container) {
       return pts.occ > 0 || pts.int > 0 || isOccupationalSkill(name);
     });
     if (!hasPoints) return;
+    // 专攻分类标题：强调父技能名
+    let titleHtml;
+    if (cat.parentName) {
+      titleHtml = `<span class="cat-parent-name">${cat.parentName}</span><span class="cat-suffix">专攻</span>`;
+    } else {
+      titleHtml = cat.title;
+    }
     html += `<div class="skill-category">
-      <div class="skill-category-title">${cat.title}</div>
+      <div class="skill-category-title">${titleHtml}</div>
       <table class="skill-table">
         <tr><th>技能</th><th>基础</th><th>职业</th><th>兴趣</th><th>总计</th></tr>
     `;
@@ -1102,13 +1399,22 @@ function renderStep9(container) {
       let pts = state.skillPoints[name] || { occ: 0, int: 0 };
       let total = base + pts.occ + pts.int;
       if (total === base && !isOcc && pts.occ === 0 && pts.int === 0) return;
+      // 专攻分类中技能名只显示子名
+      let displayName = name;
+      if (cat.parentName && name.startsWith(cat.parentName + '(') && name.endsWith(')')) {
+        displayName = name.slice(cat.parentName.length + 1, -1);
+      }
       html += `<tr>
-        <td class="skill-name">${name} ${isOcc ? '<span class="tag-occ">职</span>' : ''}</td>
+        <td class="skill-name">${displayName} ${isOcc ? '<span class="tag-occ">职</span>' : ''}</td>
         <td class="skill-base">${base}</td>
         <td class="skill-occ">${pts.occ > 0 ? '+' + pts.occ : ''}</td>
         <td class="skill-pts">${pts.int > 0 ? '+' + pts.int : ''}</td>
-        <td class="skill-total editable" contenteditable="true"
-          oninput="updateFinalSkill('${name}',this.textContent)">${total}</td>
+        <td><div class="check-cell-inline">
+          <div class="ck-main editable" contenteditable="true"
+            oninput="updateFinalSkill('${name}',this.textContent)">${total}</div>
+          <div class="ck-half">${Math.floor(total/2)}</div>
+          <div class="ck-fifth">${Math.floor(total/5)}</div>
+        </div></td>
       </tr>`;
     });
     html += `</table></div>`;
@@ -1131,8 +1437,12 @@ function renderStep9(container) {
         <td class="skill-base">${base}</td>
         <td class="skill-occ">${pts.occ > 0 ? '+' + pts.occ : ''}</td>
         <td class="skill-pts">${pts.int > 0 ? '+' + pts.int : ''}</td>
-        <td class="skill-total editable" contenteditable="true"
-          oninput="updateFinalSkill('${name}',this.textContent)">${total}</td>
+        <td><div class="check-cell-inline">
+          <div class="ck-main editable" contenteditable="true"
+            oninput="updateFinalSkill('${name}',this.textContent)">${total}</div>
+          <div class="ck-half">${Math.floor(total/2)}</div>
+          <div class="ck-fifth">${Math.floor(total/5)}</div>
+        </div></td>
       </tr>`;
     });
     html += `</table></div>`;
@@ -1162,7 +1472,6 @@ function renderStep9(container) {
 
   // Equipment
   if (state.equipment.length > 0) {
-    let totalSpent = getEquipmentTotalSpent();
     let crInfo = getCreditRatingInfo(state.creditRating);
     html += `
       <div class="char-sheet-section">
@@ -1175,13 +1484,37 @@ function renderStep9(container) {
       let icon = EQUIPMENT_CATEGORY_ICONS[item.type] || '&#128230;';
       html += `<div style="margin-bottom:4px;padding:4px 10px;background:var(--input-bg);border-radius:4px;font-size:0.85rem;">
         ${icon} ${item.name} <span style="color:var(--text-muted);">(${item.type})</span>
-        ${item.price > 0 ? `<span style="color:var(--gold);float:right;">$${item.price.toFixed(2)}</span>` : ''}
+        ${item.price > 0 ? `<span style="color:var(--gold);float:right;">${item.priceDisplay || '$' + item.price.toFixed(2)}</span>` : ''}
       </div>`;
     });
-    html += `<div style="margin-top:8px;padding:6px 10px;background:rgba(201,168,76,0.08);border-radius:4px;font-size:0.85rem;color:var(--gold);">
-      可支配现金: $${(state.spendingCash - totalSpent).toFixed(2)}
-      <span style="color:var(--text-muted);"> (已花费 $${totalSpent.toFixed(2)} / $${state.spendingCash.toFixed(2)})</span>
-    </div>`;
+    html += `</div>`;
+  }
+
+  // Weapons
+  if (state.weapons.length > 0) {
+    html += `
+      <div class="char-sheet-section">
+        <h3>&#9876; 武器</h3>
+    `;
+    state.weapons.forEach(weapon => {
+      let icon = WEAPON_CATEGORY_ICONS[weapon.category] || '&#9876;';
+      let isDetailed = weapon.skill !== undefined;
+      html += `<div style="margin-bottom:6px;padding:6px 10px;background:var(--input-bg);border-radius:4px;font-size:0.85rem;">
+        ${icon} <strong>${weapon.name}</strong>
+        <span style="color:var(--text-muted);">(${weapon.category})</span>`;
+      if (isDetailed) {
+        html += `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:0.8rem;">`;
+        html += `<span>技能: ${weapon.skill}</span>`;
+        html += `<span>伤害: ${weapon.damage}</span>`;
+        if (weapon.armorPiercing) html += `<span style="color:var(--red);">贯穿</span>`;
+        if (weapon.baseRange && weapon.baseRange !== '接触') html += `<span>射程: ${weapon.baseRange}</span>`;
+        if (weapon.attacksPerRound) html += `<span>每轮: ${weapon.attacksPerRound}</span>`;
+        if (weapon.capacity && weapon.capacity !== '-') html += `<span>弹容量: ${weapon.capacity}</span>`;
+        if (weapon.malfunction) html += `<span>故障: ${weapon.malfunction}</span>`;
+        html += `</div>`;
+      }
+      html += `</div>`;
+    });
     html += `</div>`;
   }
 

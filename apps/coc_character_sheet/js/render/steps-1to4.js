@@ -130,25 +130,28 @@ function renderStep2(container) {
       <div class="attr-grid">
   `;
   attrList.forEach(a => {
+    let v = attrs[a.key];
     html += `
-      <div class="attr-item">
+      <div class="attr-item" id="attr_${a.key}">
         <div class="attr-name">${a.name}</div>
-        <input type="number" id="attr_${a.key}" value="${displayVal(attrs[a.key])}" min="0" max="99" readonly
-          style="appearance:textfield;-moz-appearance:textfield;"
-          onchange="updateAttr('${a.key}', this.value)">
-        <div class="attr-half">${a.formula} | 半值:${Math.floor(attrs[a.key]/2)} 五分之一:${Math.floor(attrs[a.key]/5)}</div>
+        <div class="check-cell">
+          <div class="ck-main">${generated ? v : '-'}</div>
+          <div class="ck-half">${generated ? Math.floor(v/2) : '-'}</div>
+          <div class="ck-fifth">${generated ? Math.floor(v/5) : '-'}</div>
+        </div>
       </div>
     `;
   });
   html += `</div>`;
   html += `
       <div style="text-align:center;margin-top:16px;">
-        <div class="attr-item" style="display:inline-block;">
+        <div class="attr-item" id="attr_LUCK" style="display:inline-block;">
           <div class="attr-name">幸运值 LUCK</div>
-          <input type="number" id="attr_LUCK" value="${displayVal(state.luck)}" min="0" max="99" readonly
-            style="appearance:textfield;-moz-appearance:textfield;"
-            onchange="state.luck=clamp(parseInt(this.value)||0,0,99);saveState();renderStep()">
-          <div class="attr-half">3D6x5</div>
+          <div class="check-cell">
+            <div class="ck-main">${generated ? state.luck : '-'}</div>
+            <div class="ck-half">${generated ? Math.floor(state.luck/2) : '-'}</div>
+            <div class="ck-fifth">${generated ? Math.floor(state.luck/5) : '-'}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -219,7 +222,11 @@ function renderStep3(container) {
       let eff = effective[k];
       let diff = eff - orig;
       let cls = diff > 0 ? 'positive' : (diff < 0 ? 'negative' : '');
-      html += `<tr><td>${k}</td><td>${orig}</td><td>${eff}</td><td class="${cls}">${diff > 0 ? '+' : ''}${diff}</td></tr>`;
+      html += `<tr><td>${k}</td><td>${orig}</td><td><div class="check-cell-inline">
+          <div class="ck-main">${eff}</div>
+          <div class="ck-half">${Math.floor(eff/2)}</div>
+          <div class="ck-fifth">${Math.floor(eff/5)}</div>
+        </div></td><td class="${cls}">${diff > 0 ? '+' : ''}${diff}</td></tr>`;
     });
     html += `</table>`;
   }

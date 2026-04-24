@@ -39,6 +39,7 @@ let state = {
   keyConnection: -1,  // 关键连接的索引
   // Step 8
   equipment: [],  // 随身物品列表，每项: { name, type, price, detail }
+  weapons: [],    // 武器列表，每项: 完整武器对象（含战斗属性）
   spendingCash: 0,  // 可支配现金
   // Final
   completed: false

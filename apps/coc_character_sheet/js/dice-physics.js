@@ -457,21 +457,27 @@ async function rollAllAttributes() {
       state.attrsGenerated = true;
       for (const prev of A) {
         if (state.rawAttrs[prev.k]) {
-          let prevInp = document.getElementById('attr_' + prev.k);
-          if (prevInp) prevInp.value = state.rawAttrs[prev.k];
+          let prevCard = document.getElementById('attr_' + prev.k);
+          if (prevCard) {
+            let ckMain = prevCard.querySelector('.ck-main');
+            let ckHalf = prevCard.querySelector('.ck-half');
+            let ckFifth = prevCard.querySelector('.ck-fifth');
+            if (ckMain) ckMain.textContent = state.rawAttrs[prev.k];
+            if (ckHalf) ckHalf.textContent = Math.floor(state.rawAttrs[prev.k]/2);
+            if (ckFifth) ckFifth.textContent = Math.floor(state.rawAttrs[prev.k]/5);
+          }
         }
       }
       renderNavButtons();
     }
-    let inp = document.getElementById('attr_' + a.k);
-    if (inp) inp.value = state.rawAttrs[a.k];
-    let card = inp ? inp.closest('.attr-item') : null;
+    let card = document.getElementById('attr_' + a.k);
     if (card) {
-      let hf = card.querySelector('.attr-half');
-      if (hf) {
-        let attrDef = ATTR_LIST.find(x => x.key === a.k);
-        if (attrDef) hf.textContent = attrDef.formula + ' | 半值:' + Math.floor(state.rawAttrs[a.k]/2) + ' 五分之一:' + Math.floor(state.rawAttrs[a.k]/5);
-      }
+      let ckMain = card.querySelector('.ck-main');
+      let ckHalf = card.querySelector('.ck-half');
+      let ckFifth = card.querySelector('.ck-fifth');
+      if (ckMain) ckMain.textContent = state.rawAttrs[a.k];
+      if (ckHalf) ckHalf.textContent = Math.floor(state.rawAttrs[a.k]/2);
+      if (ckFifth) ckFifth.textContent = Math.floor(state.rawAttrs[a.k]/5);
       card.classList.remove('flash');
       void card.offsetWidth;
       card.classList.add('flash');
@@ -490,16 +496,18 @@ async function rollAllAttributes() {
     const r = await animRoll('幸运值 LUCK', 3, '3d6');
     state.luck = r.val;
   }
-  let li = document.getElementById('attr_LUCK');
-  if (li) {
-    li.value = state.luck;
-    let luckCard = li.closest('.attr-item');
-    if (luckCard) {
-      luckCard.classList.remove('flash');
-      void luckCard.offsetWidth;
-      luckCard.classList.add('flash');
-      setTimeout(() => luckCard.classList.remove('flash'), 1000);
-    }
+  let luckCard = document.getElementById('attr_LUCK');
+  if (luckCard) {
+    let ckMain = luckCard.querySelector('.ck-main');
+    let ckHalf = luckCard.querySelector('.ck-half');
+    let ckFifth = luckCard.querySelector('.ck-fifth');
+    if (ckMain) ckMain.textContent = state.luck;
+    if (ckHalf) ckHalf.textContent = Math.floor(state.luck/2);
+    if (ckFifth) ckFifth.textContent = Math.floor(state.luck/5);
+    luckCard.classList.remove('flash');
+    void luckCard.offsetWidth;
+    luckCard.classList.add('flash');
+    setTimeout(() => luckCard.classList.remove('flash'), 1000);
   }
 
   // 移除跳过按钮
