@@ -70,12 +70,26 @@ function loadState() {
     if (s) {
       let parsed = JSON.parse(s);
       state = { ...state, ...parsed };
-      // 兼容旧存档：如果武器列表为空，自动补上徒手
+      // 兼容旧存档：补齐缺失的字段
       if (!state.weapons || state.weapons.length === 0) {
         state.weapons = [
           { name: '徒手（拳打脚踢）', skill: '格斗(斗殴)', damage: '1D3+DB', armorPiercing: false, baseRange: '接触', attacksPerRound: '1', capacity: '-', malfunction: null, price20s: null, priceModern: null, era: '默认', category: '常规武器' },
         ];
       }
+      if (!state.fixedSpecialtyChoices) state.fixedSpecialtyChoices = {};
+      if (!state.customSkillGroups) state.customSkillGroups = {};
+      if (!state.customOccForm) state.customOccForm = { name: '', creditRatingMin: 0, creditRatingMax: 99, occupationalPoints: 0, selectedSkills: [] };
+      if (state.keyConnection === undefined || state.keyConnection === null) state.keyConnection = -1;
+      if (!state.companions) state.companions = [];
+      if (!state.equipment) state.equipment = [];
+      if (!state.background) state.background = [];
+      if (!state.skillPoints) state.skillPoints = {};
+      if (!state.eduGrowthLog) state.eduGrowthLog = [];
+      if (!state.selectedOccSkills) state.selectedOccSkills = [];
+      if (!state.derived) state.derived = { HP: 0, MP: 0, SAN: 0, DB: '0', build: 0, MOV: 9, dodge: 0, language: 0 };
+      if (!state.ageAdjustChoice) state.ageAdjustChoice = 'STR';
+      if (state.spendingCash === undefined || state.spendingCash === null) state.spendingCash = 0;
+      if (state.avatar === undefined || state.avatar === null) state.avatar = '';
       // 兼容旧存档：旧版 9 步流程 → 新版 8 步流程（移除了原 Step 6 衍生属性）
       if (state.currentStep !== undefined && state.currentStep >= 5) {
         // 旧5(衍生属性)→新5(背景故事), 旧6(背景故事)→新5(背景故事),

@@ -1328,27 +1328,27 @@ function renderStep9(container) {
         ${state.avatar ? `<div class="char-avatar"><img src="assets/avatars/${state.avatar}" alt="头像" onerror="this.parentElement.style.display='none'"></div>` : ''}
         <div>
           <div class="char-name editable" contenteditable="true"
-            oninput="state.name=this.textContent;saveState()">${state.name || '未命名调查员'}</div>
+            onblur="state.name=this.textContent.trim();saveState()">${state.name || '未命名调查员'}</div>
           <div class="char-meta">
             年龄: <span class="editable" contenteditable="true"
-              oninput="state.age=parseInt(this.textContent)||25;saveState();recalcAndRender()">${state.age}</span> |
+              onblur="state.age=parseInt(this.textContent)||25;saveState();recalcAndRender()">${state.age}</span> |
             性别: <span class="editable" contenteditable="true"
-              oninput="state.gender=this.textContent;saveState()">${state.gender}</span> |
+              onblur="state.gender=this.textContent.trim();saveState()">${state.gender}</span> |
             时代: <span class="editable" contenteditable="true"
-              oninput="state.era=this.textContent;saveState()">${state.era}</span>
+              onblur="state.era=this.textContent.trim();saveState()">${state.era}</span>
           </div>
           <div class="char-meta">
             玩家: <span class="editable" contenteditable="true"
-              oninput="state.playerName=this.textContent;saveState()">${state.playerName || 'COC-PL'}</span> |
+              onblur="state.playerName=this.textContent.trim();saveState()">${state.playerName || 'COC-PL'}</span> |
             居所: <span class="editable" contenteditable="true"
-              oninput="state.residence=this.textContent;saveState()">${state.residence || '未知'}</span> |
+              onblur="state.residence=this.textContent.trim();saveState()">${state.residence || '未知'}</span> |
             故乡: <span class="editable" contenteditable="true"
-              oninput="state.hometown=this.textContent;saveState()">${state.hometown || '未知'}</span>
+              onblur="state.hometown=this.textContent.trim();saveState()">${state.hometown || '未知'}</span>
           </div>
           <div class="char-meta">
             职业: <span style="color:var(--gold);">${state.occupation ? state.occupation.name : '未选择'}</span> |
             信用评级: <span class="editable" contenteditable="true"
-              oninput="state.creditRating=parseInt(this.textContent)||0;saveState()">${state.creditRating}</span>
+              onblur="state.creditRating=parseInt(this.textContent)||0;saveState()">${state.creditRating}</span>
           </div>
         </div>
       </div>
@@ -1363,7 +1363,7 @@ function renderStep9(container) {
         <div class="attr-name">${k}</div>
         <div class="check-cell">
           <div class="ck-main editable" contenteditable="true"
-            oninput="state.rawAttrs['${k}']=clamp(parseInt(this.textContent)||0,0,99);saveState();recalcAndRender()">${attrs[k]}</div>
+            onblur="state.rawAttrs['${k}']=clamp(parseInt(this.textContent)||0,0,99);saveState();recalcAndRender()">${attrs[k]}</div>
           <div class="ck-half">${Math.floor(attrs[k]/2)}</div>
           <div class="ck-fifth">${Math.floor(attrs[k]/5)}</div>
         </div>
@@ -1377,7 +1377,7 @@ function renderStep9(container) {
             <div class="attr-name">幸运值</div>
             <div class="check-cell">
               <div class="ck-main editable" contenteditable="true"
-                oninput="state.luck=clamp(parseInt(this.textContent)||0,0,99);saveState()">${state.luck}</div>
+                onblur="state.luck=clamp(parseInt(this.textContent)||0,0,99);saveState()">${state.luck}</div>
               <div class="ck-half">${Math.floor(state.luck/2)}</div>
               <div class="ck-fifth">${Math.floor(state.luck/5)}</div>
             </div>
@@ -1394,7 +1394,7 @@ function renderStep9(container) {
             <div class="d-name">SAN</div>
             <div class="check-cell-inline">
               <div class="ck-main editable" contenteditable="true"
-                oninput="state.derived.SAN=clamp(parseInt(this.textContent)||0,0,99);saveState()">${d.SAN}</div>
+                onblur="state.derived.SAN=clamp(parseInt(this.textContent)||0,0,99);saveState()">${d.SAN}</div>
               <div class="ck-half">${Math.floor(d.SAN/2)}</div>
               <div class="ck-fifth">${Math.floor(d.SAN/5)}</div>
             </div>
@@ -1406,7 +1406,7 @@ function renderStep9(container) {
             <div class="d-name">闪避</div>
             <div class="check-cell-inline">
               <div class="ck-main editable" contenteditable="true"
-                oninput="state.derived.dodge=clamp(parseInt(this.textContent)||0,0,99);saveState()">${d.dodge}</div>
+                onblur="state.derived.dodge=clamp(parseInt(this.textContent)||0,0,99);saveState()">${d.dodge}</div>
               <div class="ck-half">${Math.floor(d.dodge/2)}</div>
               <div class="ck-fifth">${Math.floor(d.dodge/5)}</div>
             </div>
@@ -1415,7 +1415,7 @@ function renderStep9(container) {
             <div class="d-name">母语</div>
             <div class="check-cell-inline">
               <div class="ck-main editable" contenteditable="true"
-                oninput="state.derived.language=clamp(parseInt(this.textContent)||0,0,99);saveState()">${d.language}</div>
+                onblur="state.derived.language=clamp(parseInt(this.textContent)||0,0,99);saveState()">${d.language}</div>
               <div class="ck-half">${Math.floor(d.language/2)}</div>
               <div class="ck-fifth">${Math.floor(d.language/5)}</div>
             </div>
@@ -1470,7 +1470,7 @@ function renderStep9(container) {
         <td class="skill-pts">${pts.int > 0 ? '+' + pts.int : ''}</td>
         <td><div class="check-cell-inline">
           <div class="ck-main editable" contenteditable="true"
-            oninput="updateFinalSkill('${name}',this.textContent)">${total}</div>
+            onblur="updateFinalSkill('${name}',this.textContent)">${total}</div>
           <div class="ck-half">${Math.floor(total/2)}</div>
           <div class="ck-fifth">${Math.floor(total/5)}</div>
         </div></td>
@@ -1494,7 +1494,7 @@ function renderStep9(container) {
         let keyClass = idx === state.keyConnection ? 'bg-final-key' : '';
         html += `<div class="${keyClass}" style="margin-bottom:8px;padding:6px 10px;background:var(--input-bg);border-radius:4px;">
           <span class="editable" contenteditable="true"
-            oninput="updateBackgroundContent(${idx}, this.textContent)">${prefix}[${item.category}] ${item.content}</span>
+            onblur="updateBackgroundContent(${idx}, this.textContent)">${prefix}[${item.category}] ${item.content}</span>
         </div>`;
       }
     });

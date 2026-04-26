@@ -23,8 +23,19 @@ function compressState(st) {
   if (st.ageAdjusted)   flags |= 2;
   if (st.completed)     flags |= 4;
 
-  // 属性数组: [STR, CON, SIZ, DEX, APP, INT, POW, EDU]
+  // 属性数组: [STR, CON, SIZ, DEX, APP, INT, POW, EDU]（原始值）
   let attrs = ATTR_KEYS.map(k => st.rawAttrs[k] || 0);
+
+  // 有效属性数组: 经过年龄调整后的实际值（追踪器需要此值来正确显示）
+  let effectiveAttrs = ATTR_KEYS.map(k => {
+    // 尝试从 getEffectiveAttrs 获取，如果不可用则回退到 rawAttrs
+    try {
+      let eff = getEffectiveAttrs();
+      return eff[k] || st.rawAttrs[k] || 0;
+    } catch(e) {
+      return st.rawAttrs[k] || 0;
+    }
+  });
 
   // 衍生属性: [HP, MP, SAN, DB, build, MOV, dodge, language]
   let d = st.derived;
@@ -53,8 +64,23 @@ function compressState(st) {
   // 武器: 完整保留
   let wpns = st.weapons || [];
 
-  // 职业: 只保留名称
-  let occ = st.occupation ? st.occupation.name : null;
+  // 职业: 预设职业只保留名称（导入时从 OCCUPATIONS 数组还原），自定义职业保留完整对象
+  let occ = null;
+  let occCustom = null;
+  if (st.occupation) {
+    occ = st.occupation.name;
+    if (st.occupation.custom) {
+      occCustom = {
+        name: st.occupation.name,
+        eras: st.occupation.eras || [st.era],
+        creditRating: st.occupation.creditRating,
+        skillPoints: st.occupation.skillPoints,
+        fixedSkills: st.occupation.fixedSkills || ['信用评级'],
+        choiceGroups: st.occupation.choiceGroups || [],
+        custom: true
+      };
+    }
+  }
 
   // 构建紧凑对象
   let compact = {
@@ -70,14 +96,32 @@ function compressState(st) {
       e: st.era,
       av: st.avatar || ''
     },
-    at: attrs,       // rawAttrs
+    at: attrs,       // rawAttrs（原始掷骰值）
+    ea: effectiveAttrs, // effectiveAttrs（年龄调整后的有效值）
     l: st.luck,      // luck
     ac: st.ageAdjustChoice,  // ageAdjustChoice
     el: st.eduGrowthLog || [],  // eduGrowthLog
     o: occ,           // occupation name
+    oc: occCustom,    // custom occupation full object (null for preset)
     cr: st.creditRating,
     os: st.selectedOccSkills || [],
     fs: st.fixedSpecialtyChoices || {},
+    // 展开后的完整固定技能名称列表（追踪器用来标记"职"）
+    ofsl: (function() {
+      if (!st.occupation) return [];
+      let occObj = OCCUPATIONS.find(o => o.name === st.occupation.name) || st.occupation;
+      let list = [];
+      (occObj.fixedSkills || []).forEach(function(s) {
+        if (typeof isParentSkill === 'function' && isParentSkill(s) && st.fixedSpecialtyChoices && st.fixedSpecialtyChoices[s]) {
+          list.push(st.fixedSpecialtyChoices[s]);
+        } else if (typeof isParentSkill === 'function' && isParentSkill(s)) {
+          // 纯父技能尚未选择专精 → 跳过
+        } else {
+          list.push(s);
+        }
+      });
+      return list;
+    })(),
     cg: st.customSkillGroups || {},
     cf: st.customOccForm || { name:'', creditRatingMin:0, creditRatingMax:99, occupationalPoints:0, selectedSkills:[] },
     op: st.occupationalPoints,
@@ -106,6 +150,11 @@ function decompressState(d) {
   // 还原属性
   let rawAttrs = {};
   ATTR_KEYS.forEach((k, i) => { rawAttrs[k] = d.at[i] || 0; });
+
+  // 还原有效属性（年龄调整后的值），如果没有则回退到 rawAttrs
+  let effectiveAttrsArr = d.ea || d.at || [];
+  let effectiveAttrs = {};
+  ATTR_KEYS.forEach((k, i) => { effectiveAttrs[k] = effectiveAttrsArr[i] || rawAttrs[k] || 0; });
 
   // 还原技能点
   let skillPoints = {};
@@ -140,7 +189,18 @@ function decompressState(d) {
   // 还原职业对象（从 OCCUPATIONS 数组查找）
   let occupation = null;
   if (d.o) {
-    occupation = OCCUPATIONS.find(o => o.name === d.o) || { name: d.o };
+    // 优先还原自定义职业（如果有完整数据）
+    if (d.oc && d.oc.custom) {
+      occupation = {
+        ...d.oc,
+        getPoints: function(attrs) {
+          let pts = parseInt(this.skillPoints) || 0;
+          return pts;
+        }
+      };
+    } else {
+      occupation = OCCUPATIONS.find(o => o.name === d.o) || { name: d.o };
+    }
   }
 
   // 还原衍生属性
@@ -158,6 +218,7 @@ function decompressState(d) {
     era: d.s.e || '1920s',
     avatar: d.s.av || '',
     rawAttrs,
+    effectiveAttrs,
     luck: d.l || 0,
     attrsGenerated: !!(flags & 1),
     ageAdjusted: !!(flags & 2),
@@ -285,6 +346,9 @@ function resetAll() {
       attrsGenerated: false,
       ageAdjusted: false, ageAdjustChoice: 'STR', eduGrowthLog: [],
       occupation: null, creditRating: 0, selectedOccSkills: [],
+      fixedSpecialtyChoices: {},
+      customSkillGroups: {},
+      customOccForm: { name: '', creditRatingMin: 0, creditRatingMax: 99, occupationalPoints: 0, selectedSkills: [] },
       occupationalPoints: 0, interestPoints: 0, occupationalUsed: 0, interestUsed: 0,
       skillPoints: {},
       derived: { HP: 0, MP: 0, SAN: 0, DB: '0', build: 0, MOV: 9, dodge: 0, language: 0 },
@@ -292,6 +356,9 @@ function resetAll() {
       keyConnection: -1,
       companions: [],
       equipment: [],
+      weapons: [
+        { name: '徒手（拳打脚踢）', skill: '格斗(斗殴)', damage: '1D3+DB', armorPiercing: false, baseRange: '接触', attacksPerRound: '1', capacity: '-', malfunction: null, price20s: null, priceModern: null, era: '默认', category: '常规武器' },
+      ],
       spendingCash: 0,
       completed: false
     };
