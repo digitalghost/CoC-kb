@@ -10,20 +10,22 @@
 // ============================================================
 const CREDIT_RATING_TABLE = {
   '1920s': [
-    { min: 0, max: 9, level: '赤贫', cash: 0.5, assets: '身无分文' },
-    { min: 10, max: 29, level: '贫穷', cash: 5, assets: '无资产' },
-    { min: 30, max: 49, level: '标准', cash: 50, assets: '无资产' },
-    { min: 50, max: 69, level: '小康', cash: 500, assets: '普通汽车或小公寓' },
-    { min: 70, max: 89, level: '富裕', cash: 5000, assets: '大房子或好车' },
-    { min: 90, max: 99, level: '豪富', cash: 50000, assets: '豪宅+仆人' },
+    // BUG-013: 对齐官方规则书区间
+    { min: 0, max: 0, level: '赤贫', cash: 0, assets: '身无分文' },
+    { min: 1, max: 9, level: '贫穷', cash: 0.5, assets: '身无分文' },
+    { min: 10, max: 49, level: '标准', cash: 5, assets: '无资产' },
+    { min: 50, max: 89, level: '小康', cash: 50, assets: '普通汽车或小公寓' },
+    { min: 90, max: 98, level: '富裕', cash: 500, assets: '大房子或好车' },
+    { min: 99, max: 99, level: '豪富', cash: 5000, assets: '豪宅+仆人' },
   ],
   '现代': [
-    { min: 0, max: 9, level: '赤贫', cash: 50, assets: '身无分文' },
-    { min: 10, max: 29, level: '贫穷', cash: 500, assets: '旧车或租房' },
-    { min: 30, max: 49, level: '标准', cash: 5000, assets: '普通汽车或小公寓' },
-    { min: 50, max: 69, level: '小康', cash: 50000, assets: '好车或大公寓' },
-    { min: 70, max: 89, level: '富裕', cash: 500000, assets: '豪宅或豪车' },
-    { min: 90, max: 99, level: '豪富', cash: 5000000, assets: '庄园+豪车+游艇' },
+    // BUG-013: 对齐官方规则书区间（现代版金额按比例调整）
+    { min: 0, max: 0, level: '赤贫', cash: 0, assets: '身无分文' },
+    { min: 1, max: 9, level: '贫穷', cash: 50, assets: '旧车或租房' },
+    { min: 10, max: 49, level: '标准', cash: 500, assets: '普通汽车或小公寓' },
+    { min: 50, max: 89, level: '小康', cash: 5000, assets: '好车或大公寓' },
+    { min: 90, max: 98, level: '富裕', cash: 50000, assets: '豪宅或豪车' },
+    { min: 99, max: 99, level: '豪富', cash: 500000, assets: '庄园+豪车+游艇' },
   ]
 };
 

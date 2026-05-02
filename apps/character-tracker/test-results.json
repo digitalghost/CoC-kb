@@ -1,0 +1,607 @@
+{
+  "project": "角色卡追踪器 - 端到端测试",
+  "timestamp": "2026-04-28 21:53:54",
+  "baseUrl": "http://localhost:8888",
+  "summary": {
+    "total": 99,
+    "passed": 99,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "id": "TC-01-01",
+      "name": "页面标题包含'克苏鲁的呼唤'",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-01-01b",
+      "name": "HTML lang=zh-CN",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-01-01c",
+      "name": "页面包含正面和背面结构",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-01-02",
+      "name": "localStorage 数据持久化",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-01-03-infoSection",
+      "name": "页面区域 '调查员信息区' 存在",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-01-03-attributesGrid",
+      "name": "页面区域 '属性区' 存在",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-01-03-skillsGrid",
+      "name": "页面区域 '技能区' 存在",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-01-03-backstoryGrid",
+      "name": "页面区域 '背景故事区' 存在",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-01-03-extra",
+      "name": "导入按钮区域存在",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-02-01",
+      "name": "信息字段区域 #infoFields",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-02-02",
+      "name": "头像区域 #portrait",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-02-01-name",
+      "name": "默认角色 name=亨利·阿什克罗夫特",
+      "status": "PASS",
+      "detail": "'亨利·阿什克罗夫特'"
+    },
+    {
+      "id": "TC-02-01-occupation",
+      "name": "默认角色 occupation=私家侦探",
+      "status": "PASS",
+      "detail": "'私家侦探'"
+    },
+    {
+      "id": "TC-02-01-age",
+      "name": "默认角色 age=34",
+      "status": "PASS",
+      "detail": "'34'"
+    },
+    {
+      "id": "TC-02-01-gender",
+      "name": "默认角色 gender=男",
+      "status": "PASS",
+      "detail": "'男'"
+    },
+    {
+      "id": "TC-02-01-residence",
+      "name": "默认角色 residence=波士顿",
+      "status": "PASS",
+      "detail": "'波士顿'"
+    },
+    {
+      "id": "TC-02-01-hometown",
+      "name": "默认角色 hometown=波士顿",
+      "status": "PASS",
+      "detail": "'波士顿'"
+    },
+    {
+      "id": "TC-02-01-era",
+      "name": "默认角色 era=1920s",
+      "status": "PASS",
+      "detail": "'1920s'"
+    },
+    {
+      "id": "TC-02-02b",
+      "name": "头像渲染逻辑（含回退）",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-03-01",
+      "name": "属性面板 #attributesGrid",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-03-01-STR",
+      "name": "属性 STR=60",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-03-01-CON",
+      "name": "属性 CON=50",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-03-01-SIZ",
+      "name": "属性 SIZ=55",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-03-01-DEX",
+      "name": "属性 DEX=70",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-03-01-APP",
+      "name": "属性 APP=50",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-03-01-INT",
+      "name": "属性 INT=75",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-03-01-POW",
+      "name": "属性 POW=60",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-03-01-EDU",
+      "name": "属性 EDU=65",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-03-02",
+      "name": "检定值 - 半值计算 (Math.floor(v/2))",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-03-02b",
+      "name": "检定值 - 五分之一值计算 (Math.floor(v/5))",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-03-02c",
+      "name": "属性检定单元格渲染（主值/半值/五分之一）",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-03-03",
+      "name": "MOV 属性",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-03-04",
+      "name": "属性骰子按钮",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-04-01",
+      "name": "HP 追踪器渲染",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-04-01b",
+      "name": "HP 状态复选框（重伤/濒死/昏迷）",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-04-02",
+      "name": "幸运值追踪器渲染",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-04-02b",
+      "name": "幸运值检定单元格",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-04-03",
+      "name": "MP 追踪器渲染",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-04-04",
+      "name": "SAN 追踪器渲染",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-04-04b",
+      "name": "SAN 疯狂类型复选框（临时性/不定性/永久性）",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-05-01",
+      "name": "技能面板 #skillsGrid",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-05-01-regular",
+      "name": "技能分类 'regular'",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-05-01-combat",
+      "name": "技能分类 'combat'",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-05-01-firearms",
+      "name": "技能分类 'firearms'",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-05-01-science",
+      "name": "技能分类 'science'",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-05-01-artCraft",
+      "name": "技能分类 'artCraft'",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-05-01-survival",
+      "name": "技能分类 'survival'",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-05-02",
+      "name": "技能检定值渲染（基础值+职业点+兴趣点）",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-05-03",
+      "name": "技能区块折叠/展开",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-05-04",
+      "name": "技能复选框",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-05-05",
+      "name": "技能骰子按钮",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-06-01",
+      "name": "武器渲染模块存在",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-06-01b",
+      "name": "武器表格列（武器/伤害/射程等）",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-06-01c",
+      "name": "武器技能检定值（常规/困难/极难）",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-06-02",
+      "name": "格斗面板（DB/体格/躲闪）",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-06-01w-.32 ",
+      "name": "默认武器 '.32 左轮手枪'",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-06-01w-霰弹枪",
+      "name": "默认武器 '霰弹枪'",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-06-01w-战斗匕首",
+      "name": "默认武器 '战斗匕首'",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-06-01w-徒手",
+      "name": "默认武器 '徒手'",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-07-01",
+      "name": "背景故事渲染模块",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-07-01b",
+      "name": "背景故事区域 #backstoryGrid",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-07-01c",
+      "name": "背景故事类别定义 (9/10)",
+      "status": "PASS",
+      "detail": "找到: ['形象描述', '特质', '思想与信念', '创伤和疤痕', '重要之人', '恐惧症和躁狂症', '意义非凡之地', '宝贵之物', '第三类接触']"
+    },
+    {
+      "id": "TC-07-02",
+      "name": "关键连接标记（★星号）",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-08-01",
+      "name": "随身物品渲染模块",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-08-01b",
+      "name": "物品格式（名称/类型/价格/详情）",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-08-02",
+      "name": "资产面板（信用评级+可支配现金）",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-08-01c",
+      "name": "默认角色有随身物品数据",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-09-01",
+      "name": "同伴渲染模块",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-09-01b",
+      "name": "同伴圆形辐射布局",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-09-02",
+      "name": "中心'我'节点",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-09-02b",
+      "name": "默认角色有同伴数据",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-10-01",
+      "name": "导入模块存在",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-10-01b",
+      "name": "支持 .coc7 文件格式",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-10-01c",
+      "name": "导入文件输入元素 #importFileInput",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-10-01d",
+      "name": "导入按钮存在",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-10-02",
+      "name": "导入后 localStorage 持久化",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-10-02b",
+      "name": "导入数据格式验证（_format: coc7-char-v1）",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-10-03",
+      "name": "清除角色数据功能",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-10-03b",
+      "name": "清除按钮存在 #clearDataBtn",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-10-04",
+      "name": "Toast 通知功能",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-11-01",
+      "name": "骰子模块存在",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-11-01b",
+      "name": "骰子类型支持 (7/7)",
+      "status": "PASS",
+      "detail": "找到: ['D4', 'D6', 'D8', 'D10', 'D12', 'D20', 'D100']"
+    },
+    {
+      "id": "TC-11-01c",
+      "name": "骰子面板 HTML 元素",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-11-02",
+      "name": "骰子面板开关功能",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-11-03",
+      "name": "骰子类型选择（点击增加数量）",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-11-04",
+      "name": "骰子表达式输入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-11-05",
+      "name": "掷骰功能",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-11-05b",
+      "name": "掷骰结果展示",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-11-05c",
+      "name": "DiceBox 3D 引擎初始化",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-11-06",
+      "name": "ESC 键关闭面板",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-12-01",
+      "name": "页面正反面结构",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-12-02",
+      "name": "响应式布局 - @media 查询",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-12-02b",
+      "name": "移动端断点 (800px)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "TC-12-03",
+      "name": "打印样式支持",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "QC-01",
+      "name": "app.js 使用严格模式 (use strict)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "QC-02",
+      "name": "所有渲染模块被 app.js 调用",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "QC-03",
+      "name": "CSS 变量系统定义",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "QC-04",
+      "name": "哥特风装饰元素",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "QC-05",
+      "name": "骰子按钮全局绑定",
+      "status": "PASS",
+      "detail": ""
+    }
+  ]
+}

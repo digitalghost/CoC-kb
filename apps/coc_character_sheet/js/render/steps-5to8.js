@@ -27,6 +27,20 @@ function renderStep5(container) {
 
   let attrs = getEffectiveAttrs();
   let occRemain = state.occupationalPoints - state.occupationalUsed;
+  // BUG-011: 动态计算兴趣技能点，确保与当前 INT 属性同步
+  let dynamicInterestPoints = attrs.INT * 2;
+  // 如果已分配的兴趣点超出新的总额，需要清空已分配的兴趣点
+  if (state.interestUsed > dynamicInterestPoints) {
+    // 清空所有兴趣点分配
+    for (let sk in state.skillPoints) {
+      if (state.skillPoints[sk].int > 0) {
+        state.interestUsed -= state.skillPoints[sk].int;
+        state.skillPoints[sk].int = 0;
+      }
+    }
+    saveState();
+  }
+  state.interestPoints = dynamicInterestPoints;
   let intRemain = state.interestPoints - state.interestUsed;
 
   let html = `
@@ -75,6 +89,9 @@ function renderStep5(container) {
       let pts = state.skillPoints[name] || { occ: 0, int: 0 };
       let total = base + pts.occ + pts.int;
       let occTag = isOcc ? '<span class="tag-occ">职</span>' : '';
+      // BUG-033: 非常规技能标记
+      let uncTag = (SKILLS_DATA.unconventional && SKILLS_DATA.unconventional.hasOwnProperty(name))
+        ? '<span style="font-size:0.65rem;color:var(--text-muted);margin-left:2px;background:var(--bg-secondary);padding:1px 4px;border-radius:3px;">非常规</span>' : '';
       // 专攻分类中技能名只显示子名（去掉父技能前缀）
       let displayName = name;
       if (cat.parentName && name.startsWith(cat.parentName + '(') && name.endsWith(')')) {
@@ -85,7 +102,7 @@ function renderStep5(container) {
         ? makeSkillSlider(name, 'occ', pts.occ, base)
         : `<span class="slider-disabled">—</span>`;
       html += `<tr data-skill="${name}">
-        <td class="skill-name">${displayName} ${occTag}</td>
+        <td class="skill-name">${displayName} ${occTag} ${uncTag}</td>
         <td class="skill-base">${base}</td>
         <td>${occSlider}</td>
         <td>${makeSkillSlider(name,'int',pts.int,base)}</td>

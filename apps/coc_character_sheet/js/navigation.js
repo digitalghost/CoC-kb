@@ -104,6 +104,7 @@ function compressState(st) {
     o: occ,           // occupation name
     oc: occCustom,    // custom occupation full object (null for preset)
     cr: st.creditRating,
+    csa: st.chosenSkillPointAttr || null,  // BUG-031: 技能点属性选择
     os: st.selectedOccSkills || [],
     fs: st.fixedSpecialtyChoices || {},
     // 展开后的完整固定技能名称列表（追踪器用来标记"职"）
@@ -226,6 +227,7 @@ function decompressState(d) {
     eduGrowthLog: d.el || [],
     occupation,
     creditRating: d.cr || 0,
+    chosenSkillPointAttr: d.csa || null,  // BUG-031: 技能点属性选择
     selectedOccSkills: d.os || [],
     fixedSpecialtyChoices: d.fs || {},
     customSkillGroups: d.cg || {},
@@ -272,8 +274,15 @@ function nextStep() {
     return;
   }
   if (state.currentStep === 3 && state.occupation) {
-    // 从 OCCUPATIONS 数组中重新查找职业对象（localStorage 序列化会丢失函数）
+    // BUG-031: 检查是否已选择技能点属性（「或」选项）
     let occObj = OCCUPATIONS.find(o => o.name === state.occupation.name) || state.occupation;
+    if (occObj.skillPointOptions && !state.chosenSkillPointAttr) {
+      notify('请选择技能点计算属性（DEX/STR 等「或」选项）', 'error');
+      return;
+    }
+
+    // 从 OCCUPATIONS 数组中重新查找职业对象（localStorage 序列化会丢失函数）
+    // occObj 已在上方声明
 
     // Check all fixedSkills pure parent skills have specialty selected
     for (let s of occObj.fixedSkills) {
@@ -345,7 +354,7 @@ function resetAll() {
       luck: 0,
       attrsGenerated: false,
       ageAdjusted: false, ageAdjustChoice: 'STR', eduGrowthLog: [],
-      occupation: null, creditRating: 0, selectedOccSkills: [],
+      occupation: null, chosenSkillPointAttr: null, creditRating: 0, selectedOccSkills: [],
       fixedSpecialtyChoices: {},
       customSkillGroups: {},
       customOccForm: { name: '', creditRatingMin: 0, creditRatingMax: 99, occupationalPoints: 0, selectedSkills: [] },

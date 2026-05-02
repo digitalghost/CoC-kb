@@ -12,6 +12,9 @@
 <div class="import-toast" id="importToast"></div>
 <input type="file" id="importFileInput" accept=".coc7">
 
+<!-- 操作日志面板 -->
+<div id="logPanel"></div>
+
 <!-- ================================================================
      PAGE 1 - FRONT SIDE
      ================================================================ -->
@@ -25,10 +28,12 @@
   <div class="page-title">克苏鲁的呼唤 第7版 · 调查员角色卡追踪器 · 正面</div>
   <div class="ornament-divider">⸻ ✧ ⸻</div>
 
-  <!-- 导入/清除按钮 -->
+  <!-- 导入/清除/模式按钮 -->
   <div class="import-actions">
     <button class="import-btn danger" id="clearDataBtn">清除角色数据</button>
     <button class="import-btn" id="importBtn">📂 导入角色卡 (.coc7)</button>
+    <button class="import-btn" id="editModeBtn">✏️ 编辑模式</button>
+    <button class="import-btn" id="keeperModeBtn">⚙ 守秘人模式</button>
   </div>
 
   <!-- Investigator Info + Attributes -->

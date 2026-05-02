@@ -1,15 +1,16 @@
 /**
- * render/skills.js - Skills 渲染（四区块分类）
+ * render/skills.js - Skills 渲染（支持 L2 编辑模式下技能值编辑）
  */
 
 function renderSkills(data) {
   let grid = document.getElementById('skillsGrid');
-  // 优先使用有效属性（年龄调整后的值）计算技能基础值，回退到 rawAttrs
   let attrs = data.effectiveAttrs || data.rawAttrs;
   let sp = data.skillPoints || {};
   let occSkills = data.occSkills || [];
+  let em = window.isEditMode ? window.isEditMode() : false;
+  let growthMarks = data.growthMarks || {};
 
-  // 收集所有技能名（保持原有分类顺序）
+  // 收集所有技能名
   let categories = [
     { title: '常规技能', skills: Object.keys(SKILLS_DATA.regular) },
     { title: '格斗专攻', skills: Object.keys(SKILLS_DATA.combat).map(s => '格斗(' + s + ')') },
@@ -32,7 +33,6 @@ function renderSkills(data) {
     categories.push({ title: '其他技能', skills: customSkills });
   }
 
-  // 判断技能是否属于职业技能
   function isOccSkill(skillName) {
     return occSkills.some(s => {
       if (s === skillName) return true;
@@ -41,16 +41,18 @@ function renderSkills(data) {
     });
   }
 
-  // 生成单个技能行的 HTML
   function skillRowHtml(skillName) {
     let total = calcSkillTotal(skillName, attrs, sp);
     let occ = isOccSkill(skillName);
     let occTag = occ ? '<span class="tag-occ">职</span>' : '';
+    let checked = growthMarks[skillName] ? ' checked' : '';
+    let mainClass = em ? 'ck-main editable-value' : 'ck-main';
+    let mainClick = em ? ' onclick="editSkillValue(\'' + skillName.replace(/'/g, "\\'") + '\', this)"' : '';
     return `<div class="skill-row${occ ? ' skill-row-occ' : ''}">
-      <input type="checkbox" class="skill-checkbox">
+      <input type="checkbox" class="skill-checkbox"${checked} onchange="toggleGrowthMark('${skillName.replace(/'/g, "\\'")}', this)">
       <div class="skill-name">${skillName}${occTag}</div>
       <div class="check-cell-inline">
-        <div class="ck-main">${total > 0 ? total : ''}</div>
+        <div class="${mainClass}"${mainClick}>${total > 0 ? total : ''}</div>
         <div class="ck-half">${total > 0 ? half(total) : ''}</div>
         <div class="ck-fifth">${total > 0 ? fifth(total) : ''}</div>
       </div>
@@ -80,7 +82,6 @@ function renderSkills(data) {
     });
   });
 
-  // 渲染区块
   function renderBlock(title, skills, collapsed, icon) {
     if (skills.length === 0) return '';
     let collapseClass = collapsed ? ' collapsed' : '';

@@ -134,6 +134,9 @@ function getSkillBase(skillName, attrs) {
   if (SKILLS_DATA.artCraft[skillName] !== undefined) return SKILLS_DATA.artCraft[skillName];
   // Check survival
   if (SKILLS_DATA.survival[skillName] !== undefined) return SKILLS_DATA.survival[skillName];
+  // BUG-033: Check unconventional
+  if (SKILLS_DATA.unconventional && SKILLS_DATA.unconventional[skillName] !== undefined)
+    return SKILLS_DATA.unconventional[skillName];
   return 0;
 }
 
@@ -150,6 +153,10 @@ function getAllSkillNames() {
   for (let k in SKILLS_DATA.science) names.push(k);
   for (let k in SKILLS_DATA.artCraft) names.push(k);
   for (let k in SKILLS_DATA.survival) names.push(k);
+  // BUG-033: 非常规技能
+  if (SKILLS_DATA.unconventional) {
+    for (let k in SKILLS_DATA.unconventional) names.push(k);
+  }
   return names;
 }
 
@@ -161,6 +168,8 @@ function getDisplaySkillCategories() {
   let filterSkill = (name) => {
     // 1920年代过滤掉现代专属技能
     if (!isModern && MODERN_ONLY_SKILLS.includes(name)) return false;
+    // BUG-001: 克苏鲁神话不在技能分配界面显示
+    if (name === '克苏鲁神话') return false;
     return true;
   };
 
@@ -212,6 +221,8 @@ function getDisplaySkillCategories() {
     Object.assign(buildFreeFormCategory('生存专攻', '生存'), { parentName: '生存' }),
     Object.assign(buildFreeFormCategory('操纵专攻', '操纵'), { parentName: '操纵' }),
     Object.assign(buildFreeFormCategory('学识专攻', '学识'), { parentName: '学识' }),
+    // BUG-033: 非常规技能独立分类
+    { title: '非常规技能', skills: Object.keys(SKILLS_DATA.unconventional || {}).filter(filterSkill) },
   ];
   standardCats.forEach(cat => cat.skills.forEach(s => standardSkills.add(s)));
 

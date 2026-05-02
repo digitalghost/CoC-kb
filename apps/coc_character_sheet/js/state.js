@@ -25,6 +25,7 @@ let state = {
   eduGrowthLog: [],
   // Step 4
   occupation: null,
+  chosenSkillPointAttr: null,  // BUG-031: 玩家选择的技能点属性（如 'DEX', 'STR'）
   creditRating: 0,
   selectedOccSkills: [],  // Step 4 - skill selection from choiceGroups
   fixedSpecialtyChoices: {},  // Step 4 - { parentName: 'chosenSpecialty' } 固定技能中父技能的专精选择
@@ -90,6 +91,7 @@ function loadState() {
       if (!state.ageAdjustChoice) state.ageAdjustChoice = 'STR';
       if (state.spendingCash === undefined || state.spendingCash === null) state.spendingCash = 0;
       if (state.avatar === undefined || state.avatar === null) state.avatar = '';
+      if (state.chosenSkillPointAttr === undefined || state.chosenSkillPointAttr === null) state.chosenSkillPointAttr = null;
       // 兼容旧存档：旧版 9 步流程 → 新版 8 步流程（移除了原 Step 6 衍生属性）
       if (state.currentStep !== undefined && state.currentStep >= 5) {
         // 旧5(衍生属性)→新5(背景故事), 旧6(背景故事)→新5(背景故事),

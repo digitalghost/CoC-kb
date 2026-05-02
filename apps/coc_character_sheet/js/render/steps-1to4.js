@@ -360,6 +360,7 @@ function onEraChange(newEra) {
   state.hometown = generateRandomHometown(newEra);
   // 重置职业相关数据
   state.occupation = null;
+  state.chosenSkillPointAttr = null;  // BUG-031
   state.creditRating = 0;
   state.selectedOccSkills = [];
   state.fixedSpecialtyChoices = {};
@@ -772,7 +773,7 @@ function renderStep4(container) {
     let occ = OCCUPATIONS.find(o => o.name === occName);
     if (!occ) occ = state.occupation; // fallback（自定义职业走这里）
     let attrs = getEffectiveAttrs();
-    let pts = occ.getPoints ? occ.getPoints(attrs) : (state.occupationalPoints || 0);
+    let pts = occ.getPoints ? occ.getPoints(attrs, state.chosenSkillPointAttr) : (state.occupationalPoints || 0);
 
     // Check if all choice groups are satisfied
     let allGroupsComplete = true;
@@ -782,6 +783,26 @@ function renderStep4(container) {
       if (groupSelected.length < group.count) allGroupsComplete = false;
     });
 
+    // BUG-031: 技能点属性选择 UI
+    let skillPointAttrHtml = '';
+    if (occ.skillPointOptions && occ.skillPointOptions.length > 0) {
+      let options = occ.skillPointOptions;
+      let chosen = state.chosenSkillPointAttr;
+      let buttonsHtml = options.map(attr => {
+        let attrVal = attrs[attr] || 0;
+        let isSelected = chosen === attr;
+        let btnClass = isSelected ? 'btn btn-gold' : 'btn btn-secondary';
+        return `<button class="${btnClass}" onclick="chooseSkillPointAttr('${attr}')" style="min-width:60px;">${attr} (${attrVal})</button>`;
+      }).join('');
+      skillPointAttrHtml = `
+        <div class="occ-skill-point-attr" style="margin:8px 0;padding:8px;background:var(--bg-secondary);border-radius:6px;">
+          <p style="margin:0 0 6px 0;font-size:0.85rem;color:var(--text-muted);">技能点公式含「或」选项，请选择用于计算技能点的属性：</p>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">${buttonsHtml}</div>
+          ${chosen ? `<p style="margin:6px 0 0 0;font-size:0.8rem;color:var(--text-secondary);">已选择: <strong>${chosen}</strong>（${attrs[chosen]}×2 = ${attrs[chosen] * 2} 点）</p>` : `<p style="margin:6px 0 0 0;font-size:0.8rem;color:var(--red);">⚠ 请先选择属性，否则将自动取最大值</p>`}
+        </div>
+      `;
+    }
+
     html += `
       <div class="occ-detail">
         <h4>${occ.name}</h4>
@@ -789,6 +810,7 @@ function renderStep4(container) {
           <p>本职技能点: <span>${pts}</span> 点</p>
           <p>信用评级范围: <span>${occ.creditRating[0]} - ${occ.creditRating[1]}</span></p>
         </div>
+        ${skillPointAttrHtml}
 
         <div class="occ-fixed-skills">
           <h5>固定技能（自动获得）</h5>
@@ -998,8 +1020,9 @@ function selectOccupation(idx) {
   state.occupation = OCCUPATIONS[idx];
   state.selectedOccSkills = [];
   state.fixedSpecialtyChoices = {};
+  state.chosenSkillPointAttr = null;  // BUG-031: 重置属性选择
   let attrs = getEffectiveAttrs();
-  let pts = state.occupation.getPoints(attrs);
+  let pts = state.occupation.getPoints(attrs, state.chosenSkillPointAttr);
   state.occupationalPoints = pts;
   state.interestPoints = attrs.INT * 2;
   state.occupationalUsed = 0;
@@ -1022,6 +1045,36 @@ function selectOccupation(idx) {
   // 信用评级：将第4步设置的值同步到 skillPoints
   state.skillPoints['信用评级'].occ = state.creditRating;
   state.occupationalUsed = state.creditRating;
+
+  saveState();
+  renderStep();
+}
+
+// BUG-031: 选择技能点计算属性（「或」选项）
+function chooseSkillPointAttr(attr) {
+  if (!state.occupation || !state.occupation.skillPointOptions) return;
+  if (!state.occupation.skillPointOptions.includes(attr)) return;
+
+  state.chosenSkillPointAttr = attr;
+
+  // 重新计算职业技能点
+  let attrs = getEffectiveAttrs();
+  let pts = state.occupation.getPoints(attrs, state.chosenSkillPointAttr);
+  state.occupationalPoints = pts;
+
+  // 重新计算已使用的职业技能点（排除信用评级的部分）
+  state.occupationalUsed = 0;
+  for (let sk in state.skillPoints) {
+    state.occupationalUsed += (state.skillPoints[sk].occ || 0);
+  }
+
+  // 如果已使用的职业点超过了新的总点数（扣除信用评级），需要提示
+  let creditUsed = state.skillPoints['信用评级'] ? state.skillPoints['信用评级'].occ : 0;
+  let skillUsed = state.occupationalUsed - creditUsed;
+  let skillBudget = pts - creditUsed;
+  if (skillUsed > skillBudget) {
+    notify(`属性切换后技能点减少，已分配的技能点（${skillUsed}）超出可用点数（${skillBudget}），请重新调整分配`, 'error');
+  }
 
   saveState();
   renderStep();
@@ -1327,6 +1380,7 @@ function cancelCustomOccupation() {
 // 重置当前职业选择，进入自定义职业编辑模式
 function resetToCustomOccupation() {
   state.occupation = null;
+  state.chosenSkillPointAttr = null;  // BUG-031
   state.creditRating = 0;
   state.selectedOccSkills = [];
   state.fixedSpecialtyChoices = {};

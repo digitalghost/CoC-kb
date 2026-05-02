@@ -17,16 +17,16 @@
 
 | 章节 | 内容 | 印刷页码 | 对应wiki页面 |
 |------|------|----------|-------------|
-| 第一章 | 介绍 | 12-17 | （游戏入门指导） |
-| 第二章 | 敦威治恐怖事件 | 18-39 | （完整模组） |
+| 第一章 | 介绍 | 12-17 | [[../concepts/coc-overview.md]] |
+| 第二章 | 敦威治恐怖事件 | 18-39 | [[../concepts/dunwich-horror.md]] |
 | 第三章 | 创建调查员 | 40-65 | [[../concepts/investigator-creation.md]] |
 | 第四章 | 职业 | 66-93 | [[../concepts/occupation-system.md]] |
 | 第五章 | 技能 | 94-121 | [[../concepts/skill-system.md]] |
-| 第六章 | 调查员组织 | 122-145 | （组织框架与范例） |
+| 第六章 | 调查员组织 | 122-145 | [[../concepts/investigator-organizations.md]] |
 | 第七章 | 调查员生涯 | 146-159 | [[../concepts/experience-reward.md]] |
-| 第八章 | 咆哮的二十年代 | 160-207 | （时代设定） |
-| 第九章 | 给玩家的建议 | 208-223 | （游戏指导） |
-| 第十章 | 附录 | 224-260 | （物品表、武器表等） |
+| 第八章 | 咆哮的二十年代 | 160-207 | [[../concepts/roaring-twenties.md]] |
+| 第九章 | 给玩家的建议 | 208-223 | [[../concepts/player-advice.md]] |
+| 第十章 | 附录 | 224-260 | [[../concepts/equipment.md]]、[[../concepts/weapons.md]]、[[../concepts/travel-and-transport.md]] |
 
 ## 核心内容
 

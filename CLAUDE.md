@@ -1,7 +1,7 @@
 # CLAUDE.md - CoC-kb 项目总览
 
 > 本文件是 AI 助手理解本项目的入口指引。
-> 最后更新: 2026-04-25
+> 最后更新: 2026-05-02
 
 ---
 
@@ -9,7 +9,7 @@
 
 **CoC-kb** 是一个围绕《克苏鲁的呼唤（Call of Cthulhu）第七版》TRPG 的综合项目，包含三大部分：
 
-1. **知识库** — 从官方规则书系统提取的 CoC 7e 规则 wiki（260+ 页面）
+1. **知识库** — 从官方规则书系统提取的 CoC 7e 规则 wiki（269+ 页面）
 2. **角色卡创建器** — 8 步引导式调查员角色创建工具
 3. **角色卡追踪器** — 模拟纸质角色卡的调查员数据追踪工具
 
@@ -26,14 +26,14 @@ CoC-kb/
 │   ├── wiki/
 │   │   ├── index.md                   ← 内容索引（查找页面的入口）
 │   │   ├── log.md                     ← 操作日志（仅追加）
-│   │   ├── concepts/                  ← 概念页面（53个：规则、机制、系统）
-│   │   ├── entities/                  ← 实体页面（203个：生物、神祇、模组）
-│   │   ├── images/                    ← 实体配图（~170张，AI 生成）
+│   │   ├── concepts/                  ← 概念页面（56个：规则、机制、系统）
+│   │   ├── entities/                  ← 实体页面（209个：生物、神祇、模组）
+│   │   ├── images/                    ← 实体配图（~194张，AI 生成）
 │   │   └── sources/                   ← 来源摘要（4个规则书）
 │   └── raw/                           ← 原始 PDF（只读，不可修改）
 ├── apps/
 │   ├── coc_character_sheet/           ← 角色卡创建器（多文件 SPA）
-│   └── character-tracker/             ← 角色卡追踪器（单文件 HTML）
+│   └── character-tracker/             ← 角色卡追踪器（多文件架构）
 └── .obsidian/                         ← Obsidian 配置
 ```
 
@@ -44,7 +44,7 @@ CoC-kb/
 ### 1. knowledge-base/ — 规则知识库
 
 - **主题**: 克苏鲁的呼唤第七版 TRPG 规则体系
-- **规模**: 53 个概念页面 + 203 个实体页面 + 4 个来源摘要
+- **规模**: 56 个概念页面 + 209 个实体页面 + 4 个来源摘要
 - **来源书籍**: 40周年纪念版(470页)、调查员手册(162页)、怪物之锤两卷(468页)
 - **维护规范**: 详见 `knowledge-base/CLAUDE.md`
 - **架构模式**: 基于 Karpathy 的 LLM Wiki 模式，分为三层：
@@ -89,6 +89,7 @@ CoC-kb/
 
 - **定位**: 模拟纸质角色卡正反面的调查员数据展示与追踪工具
 - **技术栈**: 多文件 HTML/CSS/JS（无框架），dice-box 3D 骰子库（ES Module）
+- **架构**: 模块化多文件架构，按功能拆分为 render/（渲染层）、data/（数据层）、dice-module.js（骰子模块）等
 - **核心功能**:
   - 调查员基本信息 + 头像
   - 8 项属性（含半值/五分之一值）+ 骰子检定按钮
@@ -101,12 +102,13 @@ CoC-kb/
   - 调查员同伴环形图（8 节点）
   - 3D 骰子检定系统（D4/D6/D8/D10/D12/D20/D100，支持骰子表达式）
 - **数据存储**: localStorage 持久化，支持 .coc7 文件导入
+- **测试**: Playwright E2E 测试（`e2e/tracker.spec.js`，覆盖 12 个测试组约 30+ 用例）+ Python 备选测试脚本（`e2e/test_runner.py`）
 - **第三方依赖**: 集成 [dice-box](https://github.com/3dice/Dice-Box) 3D 骰子库（含 WebAssembly），支持 D4/D6/D8/D10/D12/D20/D100 骰子，附带 10 种视觉主题（含 CoC 专属主题 `coc/`）
 - **文件结构**:
   ```
-  index.html              ← HTML 结构 + 外部文件引用（~248 行）
+  index.html              ← HTML 结构 + 外部文件引用（~253 行）
   css/
-    tracker.css           ← 全部样式（~1485 行）
+    tracker.css           ← 全部样式（~2141 行）
   js/
     data/
       skills.js           ← 技能基础值数据 + 常量（SKILLS_DATA, SPECIALTY_MAP, ATTR_KEYS 等）
@@ -126,6 +128,11 @@ CoC-kb/
     dice-module.js        ← 3D 骰子模块（ES Module）
   assets/                 ← 背景图 + 4 个角落装饰 SVG
   dice-box/               ← 3D 骰子引擎库 + 10 种主题资源
+  e2e/                    ← E2E 测试
+    tracker.spec.js       ← Playwright 测试（12 组约 30+ 用例）
+    test_runner.py        ← Python 备选测试脚本
+  playwright.config.js    ← Playwright 配置（Chromium，单 worker，30s 超时）
+  package.json            ← 最小化配置（仅用于测试脚本声明）
   ```
 
 ### 4. 视觉设计体系
@@ -168,11 +175,12 @@ knowledge-base/wiki/entities/  ──实体数据──→  apps/character-track
 
 ### 代码风格
 
-- 两个 app 均为纯前端项目，无构建工具、无框架、无包管理器、无测试框架
+- 两个 app 均为纯前端项目，无构建工具、无框架、无包管理器
 - JavaScript 使用全局函数式架构（非模块化），通过 `<script>` 标签按依赖顺序加载
 - CSS 使用自定义属性（CSS Variables）管理主题色
 - 中文注释，英文变量名
 - **第三方依赖**: 仅 character-tracker 使用了外部库 [dice-box](https://github.com/3dice/Dice-Box)（3D 骰子引擎），角色卡创建器的骰子系统为自研实现（CSS 3D Transform）
+- **测试**: character-tracker 配有 Playwright E2E 测试（`e2e/tracker.spec.js`）和 Python 备选测试脚本（`e2e/test_runner.py`），coc_character_sheet 暂无测试
 
 ### 工具链与环境
 

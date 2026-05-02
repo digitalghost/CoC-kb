@@ -2,7 +2,7 @@
 // 从 coc_character_creator.html 提取
 
 const AGE_TABLE = [
-  { min: 15, max: 19, eduGrowth: 0, strConDex: -5, strConDexCount: 0, app: -5, movPenalty: 0, luckyTwice: true },
+  { min: 15, max: 19, eduGrowth: 0, strConDex: -5, strConDexCount: 0, app: 0, movPenalty: 0, luckyTwice: true },
   { min: 20, max: 39, eduGrowth: 1, strConDex: 0, strConDexCount: 0, app: 0, movPenalty: 0, luckyTwice: false },
   { min: 40, max: 49, eduGrowth: 2, strConDex: -5, strConDexCount: 1, app: -5, movPenalty: -1, luckyTwice: false },
   { min: 50, max: 59, eduGrowth: 3, strConDex: -10, strConDexCount: 1, app: -10, movPenalty: -2, luckyTwice: false },

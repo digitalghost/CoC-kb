@@ -14,13 +14,18 @@ function renderBasicInfo(data) {
     // 头像
     let portrait = document.getElementById('portrait');
     let portraitIcon = document.getElementById('portraitIcon');
+    // 清理旧的头像图片（防止重复导入时堆叠）
+    portrait.querySelectorAll('img.portrait-img').forEach(el => el.remove());
     if (data.avatar) {
-      // 创建器头像路径相对于创建器目录，这里尝试直接显示
       let img = new Image();
+      img.className = 'portrait-img';
       img.src = '../coc_character_sheet/assets/avatars/' + data.avatar;
       img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:6px;';
       img.onerror = function() { img.style.display = 'none'; portraitIcon.style.display = 'flex'; };
       portraitIcon.style.display = 'none';
       portrait.insertBefore(img, portraitIcon);
+    } else {
+      // 无头像时确保图标可见
+      portraitIcon.style.display = 'flex';
     }
   }

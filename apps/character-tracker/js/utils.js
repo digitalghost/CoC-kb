@@ -31,8 +31,8 @@
       }
       return v;
     }
-    for (let cat of ['combat','firearms','science','artCraft','survival']) {
-      if (SKILLS_DATA[cat][skillName] !== undefined) return SKILLS_DATA[cat][skillName];
+    for (let cat of ['combat','firearms','science','artCraft','survival','unconventional']) {
+      if (SKILLS_DATA[cat] && SKILLS_DATA[cat][skillName] !== undefined) return SKILLS_DATA[cat][skillName];
     }
     return 0;
   }

@@ -975,29 +975,63 @@
     padding: 4px 8px;
   }
 
+  .backstory-field-key {
+    border-color: rgba(201, 168, 76, 0.3);
+    box-shadow: 0 0 6px rgba(201, 168, 76, 0.08);
+  }
+
   .backstory-label {
     font-size: 9px;
     color: var(--gold);
     letter-spacing: 1px;
     margin-bottom: 4px;
     font-weight: bold;
-  }
-
-  .backstory-lines {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    align-items: center;
+    gap: 4px;
   }
 
-  .backstory-line {
-    height: 1px;
-    background: var(--border-color);
-    flex: 1;
-    min-height: 14px;
+  .backstory-content {
+    min-height: 0;
+  }
+
+  .backstory-textarea {
+    width: 100%;
+    background: var(--bg-input, rgba(15, 20, 30, 0.8));
+    border: 1px solid var(--input-border, rgba(201, 168, 76, 0.15));
+    border-radius: 3px;
+    color: var(--text-secondary, #a0a8b8);
     font-size: 9px;
-    color: var(--text-secondary);
-    line-height: 1.5;
-    padding: 1px 0;
+    line-height: 1.6;
+    padding: 4px 6px;
+    resize: vertical;
+    min-height: 36px;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+
+  .backstory-textarea:focus {
+    outline: none;
+    border-color: rgba(201, 168, 76, 0.4);
+    box-shadow: 0 0 0 1px rgba(201, 168, 76, 0.1);
+  }
+
+  .backstory-textarea::placeholder {
+    color: rgba(160, 168, 184, 0.3);
+    font-style: italic;
+  }
+
+  .backstory-text {
+    font-size: 9px;
+    color: var(--text-secondary, #a0a8b8);
+    line-height: 1.6;
+    padding: 2px 0;
+    word-break: break-word;
+  }
+
+  .backstory-empty {
+    color: rgba(160, 168, 184, 0.25);
   }
 
   /* Middle Section: Equipment + Assets */
@@ -1196,6 +1230,19 @@
   .hub-node .node-player {
     font-size: 6px;
     color: var(--text-dim);
+    min-height: 10px;
+  }
+
+  .hub-node .node-player.editable-value {
+    cursor: pointer;
+    border-radius: 2px;
+    padding: 1px 2px;
+    margin: 0 -2px;
+    min-height: 10px;
+  }
+  .hub-node .node-player.editable-value:hover {
+    background: rgba(201,168,76,0.08);
+    box-shadow: inset 0 0 0 1px rgba(201,168,76,0.2);
   }
 
   .hub-line {
@@ -1567,4 +1614,528 @@
   }
   .skill-category-header:first-child {
     margin-top: 0;
+  }
+
+  /* ================================================================
+     EDITABLE MODE STYLES
+     ================================================================ */
+
+  /* ===== 可编辑值指示器 ===== */
+  .editable-value {
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s;
+    position: relative;
+  }
+  .editable-value:hover {
+    background: rgba(201,168,76,0.08) !important;
+    box-shadow: inset 0 0 0 1px rgba(201,168,76,0.3);
+  }
+
+  /* 内联编辑 input */
+  .inline-edit-input {
+    background: var(--bg-input);
+    border: 1px solid var(--gold-dim);
+    border-radius: 3px;
+    color: var(--gold-bright);
+    font-family: var(--font-display);
+    font-weight: bold;
+    text-align: center;
+    outline: none;
+    padding: 0 2px;
+    box-shadow: 0 0 6px rgba(201,168,76,0.3);
+  }
+  .inline-edit-input.wide {
+    text-align: left;
+    padding: 0 4px;
+    font-family: var(--font-ui);
+    font-weight: normal;
+    color: var(--text-primary);
+  }
+
+  /* ===== +/- 调整按钮 ===== */
+  .adj-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid var(--border-light);
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    padding: 0;
+    line-height: 1;
+    flex-shrink: 0;
+    font-family: var(--font-ui);
+  }
+  .adj-btn:hover {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+    background: rgba(201,168,76,0.1);
+  }
+  .adj-btn:active {
+    transform: scale(0.9);
+  }
+  .adj-btn.minus:hover {
+    border-color: var(--red-dim);
+    color: var(--red);
+    background: rgba(166,61,64,0.1);
+  }
+  .adj-btn.plus:hover {
+    border-color: var(--green-dim);
+    color: var(--green);
+    background: rgba(61,139,110,0.1);
+  }
+
+  /* ===== 值超出范围警告 ===== */
+  .value-warn {
+    color: var(--red) !important;
+    animation: warnPulse 1.5s ease-in-out infinite;
+  }
+  @keyframes warnPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* ===== 状态勾选交互 ===== */
+  .hp-status-item {
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .hp-status-item:hover {
+    opacity: 0.8;
+  }
+  .hp-status-check.checked {
+    background: var(--red-dim);
+    border-color: var(--red);
+    color: var(--gold-bright);
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .san-ins-item {
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .san-ins-item:hover {
+    opacity: 0.8;
+  }
+  .san-ins-check.checked {
+    background: var(--gold-dim);
+    border-color: var(--gold);
+    color: var(--gold-bright);
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ===== 模式按钮 ===== */
+  .import-btn.active {
+    background: rgba(201,168,76,0.25);
+    border-color: var(--gold);
+    color: var(--gold-bright);
+    box-shadow: 0 0 8px rgba(201,168,76,0.2);
+  }
+
+  /* ===== 守秘人模式属性高亮 ===== */
+  .attr-box.keeper-editable {
+    border-color: rgba(201,168,76,0.5);
+    box-shadow: inset 0 0 12px rgba(201,168,76,0.06);
+  }
+  .attr-box.keeper-editable .ck-main.editable-value:hover {
+    background: rgba(201,168,76,0.12) !important;
+    box-shadow: inset 0 0 0 1.5px var(--gold);
+  }
+
+  /* ===== 武器编辑 ===== */
+  .weapon-del-cell {
+    width: 20px;
+    padding: 0 2px !important;
+  }
+  .weapon-del-btn {
+    width: 16px;
+    height: 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 10px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    padding: 0;
+    line-height: 16px;
+  }
+  .weapon-del-btn:hover {
+    color: var(--red);
+    background: rgba(166,61,64,0.15);
+  }
+  .weapon-add-btn {
+    display: block;
+    width: 100%;
+    padding: 3px 0;
+    margin-bottom: 4px;
+    background: rgba(61,139,110,0.08);
+    border: 1px dashed rgba(61,139,110,0.4);
+    border-radius: 3px;
+    color: var(--green);
+    font-size: 9px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font-ui);
+  }
+  .weapon-add-btn:hover {
+    background: rgba(61,139,110,0.15);
+    border-color: var(--green);
+  }
+
+  /* ===== 装备编辑 ===== */
+  .equipment-line-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .equipment-line-row .equipment-line {
+    flex: 1;
+  }
+  .equip-del-btn {
+    width: 14px;
+    height: 14px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 9px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    padding: 0;
+    line-height: 14px;
+    flex-shrink: 0;
+  }
+  .equip-del-btn:hover {
+    color: var(--red);
+    background: rgba(166,61,64,0.15);
+  }
+
+  /* 物品编辑行（名称+价格双字段） */
+  .equipment-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 0;
+  }
+  .equipment-edit-row .equip-name-input {
+    flex: 1;
+    min-width: 0;
+  }
+  .equipment-edit-row .equip-price-sep {
+    color: var(--gold-dim, rgba(201,168,76,0.5));
+    font-size: 9px;
+    flex-shrink: 0;
+  }
+  .equipment-edit-row .equip-price-input {
+    width: 60px;
+    flex-shrink: 0;
+    -moz-appearance: textfield;
+  }
+  .equipment-edit-row .equip-price-input::-webkit-inner-spin-button,
+  .equipment-edit-row .equip-price-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .equip-add-btn {
+    display: block;
+    width: 100%;
+    padding: 3px 0;
+    margin-bottom: 4px;
+    background: rgba(61,139,110,0.08);
+    border: 1px dashed rgba(61,139,110,0.4);
+    border-radius: 3px;
+    color: var(--green);
+    font-size: 9px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font-ui);
+  }
+  .equip-add-btn:hover {
+    background: rgba(61,139,110,0.15);
+    border-color: var(--green);
+  }
+
+  /* ===== 背景故事关键连接切换 ===== */
+  .tag-clickable {
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .tag-clickable:hover {
+    opacity: 0.6;
+  }
+  .tag-key-empty {
+    display: inline-block;
+    font-size: 0.6rem;
+    padding: 0 4px;
+    background: transparent;
+    color: var(--text-dim);
+    border-radius: 2px;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-right: 4px;
+  }
+  .tag-key-empty:hover {
+    color: var(--gold);
+    background: rgba(201,168,76,0.1);
+  }
+
+  /* ===== 确认对话框 ===== */
+  .confirm-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 10002;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: confirmFadeIn 0.2s ease-out;
+  }
+  @keyframes confirmFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .confirm-dialog {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-accent);
+    border-radius: 10px;
+    padding: 20px 24px;
+    max-width: 380px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .confirm-title {
+    font-size: 14px;
+    color: var(--gold);
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-family: var(--font-display);
+  }
+  .confirm-message {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .confirm-btn {
+    padding: 6px 16px;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font-ui);
+    border: 1px solid var(--border-color);
+  }
+  .confirm-btn.cancel {
+    background: transparent;
+    color: var(--text-secondary);
+  }
+  .confirm-btn.cancel:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
+  .confirm-btn.ok {
+    background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+    color: var(--bg-primary);
+    border-color: var(--gold);
+    font-weight: bold;
+  }
+  .confirm-btn.ok:hover {
+    box-shadow: 0 2px 8px rgba(201,168,76,0.3);
+  }
+
+  /* ================================================================
+     LOG PANEL STYLES
+     ================================================================ */
+
+  /* Log Panel 容器 - 固定在页面顶部，不遮挡内容 */
+  #logPanel {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--border-accent);
+    background: rgba(10, 14, 20, 0.7);
+    font-family: var(--font-ui);
+    transition: box-shadow 0.2s;
+  }
+  #logPanel:hover {
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+
+  /* Log 头部 - 始终可见，可点击折叠/展开 */
+  .log-header {
+    display: flex;
+    align-items: center;
+    padding: 4px 12px;
+    cursor: pointer;
+    user-select: none;
+    gap: 8px;
+    transition: background 0.15s;
+  }
+  .log-header:hover {
+    background: rgba(201,168,76,0.05);
+  }
+  .log-title {
+    font-size: 10px;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+  .log-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--gold-dim);
+    color: var(--bg-primary);
+    font-size: 9px;
+    font-weight: bold;
+    line-height: 1;
+  }
+  .log-chevron {
+    margin-left: auto;
+    font-size: 8px;
+    color: var(--text-dim);
+    transition: transform 0.2s;
+  }
+
+  /* Log 内容区 - 折叠时高度为0 */
+  .log-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    background: rgba(0, 0, 0, 0.08);
+  }
+  .log-body.expanded {
+    max-height: 200px;
+    overflow-y: auto;
+    border-top: 1px solid var(--border-light);
+  }
+
+  /* 自定义滚动条 */
+  .log-body::-webkit-scrollbar {
+    width: 4px;
+  }
+  .log-body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .log-body::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+  }
+  .log-body::-webkit-scrollbar-thumb:hover {
+    background: var(--text-dim);
+  }
+
+  /* 空日志提示 */
+  .log-empty {
+    padding: 10px 12px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 11px;
+  }
+
+  /* 单条日志 */
+  .log-entry {
+    display: flex;
+    align-items: center;
+    padding: 3px 12px;
+    gap: 8px;
+    font-size: 11px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background 0.1s;
+  }
+  .log-entry:hover {
+    background: rgba(201,168,76,0.04);
+  }
+  .log-entry:last-of-type {
+    border-bottom: none;
+  }
+  .log-time {
+    color: var(--text-dim);
+    font-size: 10px;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    min-width: 58px;
+  }
+  .log-desc {
+    flex: 1;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* 撤回按钮 */
+  .log-undo-btn {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    padding: 0;
+    line-height: 1;
+    opacity: 0;
+  }
+  .log-entry:hover .log-undo-btn {
+    opacity: 1;
+  }
+  .log-undo-btn:hover {
+    color: var(--gold);
+    border-color: var(--gold-dim);
+    background: rgba(201,168,76,0.1);
+  }
+  .log-undo-btn:active {
+    transform: scale(0.9);
+  }
+
+  /* 清空日志按钮 */
+  .log-clear-btn {
+    display: block;
+    width: 100%;
+    padding: 5px 0;
+    background: transparent;
+    border: none;
+    border-top: 1px solid var(--border-light);
+    color: var(--text-dim);
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font-ui);
+  }
+  .log-clear-btn:hover {
+    color: var(--red);
+    background: rgba(166,61,64,0.06);
   }
