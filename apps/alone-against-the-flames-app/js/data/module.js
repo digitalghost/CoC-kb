@@ -25,12 +25,9 @@ function toAction(jump, fromId, index) {
     check: null
   };
   const label = jump.label || "";
-  if (classifyOutcome(label) === "success") {
-    action.check = { outcome: "success" };
-  } else if (classifyOutcome(label) === "failure") {
-    action.check = { outcome: "failure" };
-  } else if (classifyOutcome(label) === "fumble") {
-    action.check = { outcome: "fumble" };
+  const outcome = classifyOutcome(label);
+  if (outcome) {
+    action.check = { outcome };
   }
   return action;
 }
@@ -47,7 +44,7 @@ function classifyOutcome(label) {
   if (/^如果你在.*落败/.test(label)) return "failure";
   if (/^如果你的检定失败/.test(label)) return "failure";
   if (/^否则/.test(label)) return "failure";
-  if (/^如果你的孤注一掷失败/.test(label)) return "failure";
+  if (/^如果你的孤注一掷失败/.test(label)) return "pushed_failure";
 
   if (/大失败/.test(label)) return "fumble";
 
@@ -65,6 +62,15 @@ function toNode(entry) {
     actions.forEach(a => { a.check = null; });
   }
 
+  if (hasCheckDirective) {
+    const gatedTargets = new Set(actions.filter(a => a.check).map(a => a.next));
+    for (let i = actions.length - 1; i >= 0; i--) {
+      if (!actions[i].check && gatedTargets.has(actions[i].next)) {
+        actions.splice(i, 1);
+      }
+    }
+  }
+
   const hasFumble = actions.some(a => a.check?.outcome === "fumble");
   const hasSuccess = actions.some(a => a.check?.outcome === "success");
   if (hasFumble && !hasSuccess) {
@@ -72,6 +78,8 @@ function toNode(entry) {
       if (a.check?.outcome === "failure") a.check.outcome = "non_fumble";
     });
   }
+
+  const pushable = actions.some(a => a.check?.outcome === "pushed_failure");
 
   const node = {
     id: entry.id,
@@ -84,6 +92,7 @@ function toNode(entry) {
     directives,
     translatorNotes: entry.translatorNotes || [],
     actions,
+    pushable,
     checkHints: directivesToCheckHints(directives),
     onEnterEffects: [
       ...directivesToEffects(directives, false),
@@ -138,25 +147,441 @@ const THRESHOLD_GATES = {
 };
 
 const ENTRY_SCRIPTS = {
-  "entry-55": [{ type: "adjustHp", diceExpr: "2D6", sign: -1 }],
-  "entry-59": [{ type: "adjustHp", value: -1 }],
-  "entry-154": [{ type: "adjustHp", value: 1 }],
-  "entry-203": [{ type: "adjustHp", diceExpr: "1D6", sign: -1 }],
-  "entry-222": [{ type: "adjustHp", value: -1 }],
-  "entry-258": [{ type: "adjustHp", diceExpr: "1D3", sign: -1 }],
-  "entry-94": [{ type: "adjustSan", value: 1 }],
-  "entry-250": [{ type: "adjustSan", diceExpr: "1D2", sign: -1, checkGated: true }],
-  "entry-39": [{ type: "tickSkill", skill: "魅惑" }],
-  "entry-162": [{ type: "tickSkill", skill: "心理学" }],
-  "entry-174": [{ type: "tickSkill", skill: "汽车驾驶" }],
-  "entry-225": [{ type: "tickSkill", skill: "锁匠" }],
-  "entry-136": [{ type: "adjustSkill", skill: "博物学", value: 1 }],
-  "entry-143": [{ type: "adjustSkill", skill: "博物学", value: 2 }],
-  "entry-171": [{ type: "adjustSkill", skill: "克苏鲁神话", value: 4 }],
-  "entry-237": [{ type: "adjustSkill", skill: "克苏鲁神话", value: 2 }],
+  // ─── entry-1 到 entry-25 ───
+  "entry-2": [{ type: "adjustHp", value: 1 }],
+  "entry-5": [{ type: "adjustSan", diceExpr: "1D3", sign: -1 }],
+  "entry-8": [{
+    type: "conditionBranch",
+    stat: "SIZ",
+    operator: "<=",
+    value: 40,
+    targetIfTrue: "entry-23",
+    targetIfFalse: "entry-38",
+    labelIfTrue: "你的体型较小（体型40），司机帮你搭了把手",
+    labelIfFalse: "你的体型较大（体型40以上），你自己搬上了行李"
+  }],
+  "entry-12": [{ type: "tickSkill", skill: "闪避" }],
+  "entry-13": [{ type: "adjustHp", value: 1 }],
   "entry-16": [{ type: "gainItem", item: "狩猎小刀" }],
-  "entry-159": [{ type: "gainItem", item: "《阿撒托斯及其他》诗集" }],
-  "entry-184": [{ type: "gainItem", item: "《阿撒托斯及其他》诗集" }],
+  "entry-19": [{ type: "tickSkill", skill: "恐吓" }],
+
+  // ─── entry-26 到 entry-50 ───
+  "entry-26": [{
+    type: "custom",
+    fn: (state) => {
+      state.flags.penaltyDay = true;
+    }
+  }],
+  "entry-29": [{
+    type: "custom",
+    fn: (state) => {
+      const dex = state.character.attributes?.DEX ?? 0;
+      const siz = state.character.attributes?.SIZ ?? 0;
+      if (dex >= siz) {
+        state.conditionBranchResult = {
+          met: true,
+          targetIfTrue: "entry-42",
+          targetIfFalse: "entry-42",
+          labelIfTrue: "你的敏捷高于体型，轻松通过狭窄地带",
+          labelIfFalse: "",
+        };
+      }
+      // DEX < SIZ：不设 conditionBranchResult，由检定 hint 接管（敏捷检定）
+    }
+  }],
+  "entry-30": [{ type: "tickSkill", skill: "侦查" }],
+  "entry-35": [{ type: "tickSkill", skill: "博物学" }],
+  "entry-39": [{ type: "tickSkill", skill: "魅惑" }],
+  "entry-48": [{ type: "tickSkill", skill: "攀爬" }],
+
+  // ─── entry-51 到 entry-75 ───
+  // entry-45: 夜间战斗后醒来（entry-203/entry-217均跳至此），标记 nightFight
+  "entry-45": [{ type: "setFlag", key: "nightFight", value: true }],
+  // entry-51: 纯叙事→entry-63，无脚本
+  "entry-52": [{
+    type: "custom",
+    checkGated: true,
+    fn: (state) => {
+      // 体质检定失败：今天技能检定受惩罚骰
+      state.flags.penaltyDay = true;
+    }
+  }],
+  // entry-53: 困难闪避检定，parser处理，无额外效果
+  // entry-54: 纯叙事+选择，无脚本
+  "entry-55": [
+    { type: "adjustHp", diceExpr: "2D6", sign: -1 }
+    // thresholdGate 已在 THRESHOLD_GATES["entry-55"] 中定义
+  ],
+  // entry-56: 纯叙事+选择，无脚本
+  // entry-57: 侦查检定，parser处理，无额外效果
+  "entry-58": [{ type: "adjustHp", value: 1 }],
+  // entry-59: 纯叙事（瘀伤无数值变化），无脚本
+  // entry-60: 考古学检定，parser处理，无额外效果
+  // entry-61: 纯叙事→entry-120，无脚本
+  // entry-62: 纯叙事+选择，无脚本
+  // entry-63: 纯叙事→entry-154，无脚本
+  "entry-64": [{
+    type: "custom",
+    fn: (state) => {
+      // 如果昨晚卷入了战斗（nightFight flag），显示两个选项；否则直接跳entry-78
+      if (!state.flags.nightFight) {
+        state.conditionBranchResult = {
+          met: false,
+          targetIfTrue: "entry-70",
+          targetIfFalse: "entry-78",
+          labelIfTrue: "",
+          labelIfFalse: "昨晚没有战斗，前往村庄探索"
+        };
+      }
+      // 有 nightFight flag 时，保留原始两个选项按钮（parser生成）
+    }
+  }],
+  "entry-65": [{
+    type: "custom",
+    fn: (state, applyEffects) => {
+      applyEffects(state, [{ type: "adjustHp", diceExpr: "1D6", sign: -1 }]);
+      if (state.character.stats.hp.current > 0) {
+        // HP 未归零：取消死亡状态，让力量检定继续
+        state.dead = false;
+        state.deathNodeId = null;
+      }
+    }
+  }],
+  "entry-66": [{ type: "tickSkill", skill: "考古学" }],
+  // entry-67: 体质检定，parser处理，无额外效果
+  // entry-68: 纯叙事+选择，无脚本
+  "entry-69": [{ type: "tickSkill", skill: "侦查" }],
+  // entry-70: 纯叙事→entry-78，无脚本
+  // entry-71: 纯叙事+职业选择，无脚本
+  // entry-72: 纯叙事→entry-79，无脚本
+  "entry-73": [{
+    type: "custom",
+    fn: (state) => {
+      // HP归零→entry-92（死亡），否则→entry-82（P2遗留，暂用conditionBranch）
+      const hp = state.character.stats?.hp?.current ?? 1;
+      state.conditionBranchResult = {
+        met: hp <= 0,
+        targetIfTrue: "entry-92",
+        targetIfFalse: "entry-82",
+        labelIfTrue: "耐久值归零，重伤倒地",
+        labelIfFalse: "虽然摔落，但还能撑住"
+      };
+    }
+  }],
+  // entry-74: 纯叙事→entry-99，无脚本
+  // entry-75: 纯叙事→entry-86，无脚本
+
+  // ─── entry-76 到 entry-100 ───
+  "entry-76": [{ type: "tickSkill", skill: "科学(植物学)" }],
+  // entry-77: 结局节点，无脚本
+  // entry-78: 纯叙事+选择，无脚本
+  // entry-79: 困难聆听检定，parser处理，无额外效果
+  // entry-80: 结局节点，无脚本
+  // entry-81: 纯叙事→entry-99，无脚本
+  // entry-82: 纯叙事→entry-108，无脚本
+  // entry-83: 侦查检定，parser处理，无额外效果
+  // entry-84: 纯叙事→entry-25，无脚本
+  // entry-85: 幸运检定，parser处理，无额外效果
+  // entry-86: 纯叙事+选择，无脚本
+  // entry-87: 困难侦查检定，parser处理，无额外效果
+  // entry-88: 纯叙事→entry-99，无脚本
+  // entry-89: 孤注一掷侦查检定，parser处理，无额外效果
+  "entry-90": [{
+    type: "custom",
+    fn: (state) => {
+      state.flags.awaitingMpInput = true;
+      state.flags.mpInputMax = Math.min(10, (state.character.stats?.mp?.current ?? 0) + Math.max(0, (state.character.stats?.hp?.current ?? 1) - 1));
+    }
+  }],
+  // entry-91: 纯叙事→entry-79，无脚本
+  // entry-92: 结局节点，无脚本
+  "entry-93": [{
+    type: "custom",
+    fn: (state, applyEffects) => {
+      applyEffects(state, [{ type: "adjustHp", diceExpr: "1D6", sign: -1 }]);
+      if (state.character.stats.hp.current > 0) {
+        state.dead = false;
+        state.deathNodeId = null;
+      }
+    }
+  }],
+  "entry-94": [{
+    type: "custom",
+    fn: (state) => {
+      // 如果之前损失过理智，回复1点SAN
+      const sanMax = state.character.stats?.san?.max ?? 0;
+      const sanCur = state.character.stats?.san?.current ?? sanMax;
+      if (sanCur < sanMax) {
+        state.character.stats.san.current = Math.min(sanMax, sanCur + 1);
+        state.character.derived.SAN = state.character.stats.san.current;
+      }
+    }
+  }],
+  // entry-95: 纯叙事+选择，无脚本
+  // entry-96: 心理学检定，parser处理，无额外效果
+  "entry-97": [
+    { type: "adjustHp", diceExpr: "1D3", sign: -1 },
+    // 急救检定成功→回复1点HP + tickSkill（checkGated）
+    { type: "adjustHp", value: 1, checkGated: true },
+    { type: "tickSkill", skill: "急救", checkGated: true }
+  ],
+  // entry-98: 纯叙事+选择，无脚本
+  // entry-99: 信用评级检定，parser处理，无额外效果
+  // entry-100: 纯叙事→entry-63，无脚本
+
+  // ─── entry-101 到 entry-125 ───
+  // entry-101: 纯叙事→entry-108，无脚本
+  // entry-102: 纯叙事（职业介绍：文物学家），无脚本
+  // entry-103: 纯叙事+选择，无脚本
+  // entry-104: 纯叙事→entry-205，无脚本
+  // entry-105: 纯叙事→entry-180，无脚本
+  "entry-106": [{ type: "tickSkill", skill: "心理学" }],
+  // entry-107: 纯叙事→entry-152，无脚本
+  // entry-108: 纯叙事+选择，无脚本
+  "entry-109": [{
+    type: "custom",
+    fn: (state, applyEffects) => {
+      applyEffects(state, [{ type: "adjustHp", diceExpr: "1D6", sign: -1 }]);
+      if (state.character.stats.hp.current > 0) {
+        state.dead = false;
+        state.deathNodeId = null;
+      }
+    }
+  }],
+  // entry-110: 极难潜行检定（含大失败），parser处理，无额外效果
+  // entry-111: 侦查检定，parser处理，无额外效果
+  "entry-112": [
+    { type: "adjustSan", value: 1 },
+    { type: "tickSkill", skill: "侦查" }
+  ],
+  // entry-113: 纯叙事→entry-205，无脚本
+  // entry-114: 纯叙事→entry-120，无脚本
+  // entry-115: 幸运检定，parser处理，无额外效果
+  // entry-116: 幸运检定，parser处理，无额外效果
+  // entry-117: 外貌检定，parser处理，无额外效果
+  "entry-118": [{ type: "tickSkill", skill: "侦查" }],
+  // entry-119: 极难话术检定，parser处理，无额外效果
+  // entry-120: 纯叙事+选择（探索枢纽），无脚本
+  // entry-121: 追踪检定，parser处理，无额外效果
+  // entry-122: 纯叙事→entry-79，无脚本
+  // entry-123: 结局节点，无脚本
+  // entry-124: 纯叙事→entry-180，无脚本
+  // entry-125: 困难乔装检定，parser处理，无额外效果
+
+  // ─── entry-126 到 entry-150 ───
+  // entry-126: 纯叙事→entry-133，无脚本
+  // entry-127: 纯叙事+选择，无脚本
+  // entry-128: 纯叙事→entry-144，无脚本
+  // entry-129: 纯叙事→entry-79，无脚本
+  // entry-130: 纯叙事→entry-63，无脚本
+  // entry-131: 纯叙事+选择，无脚本
+  // entry-132: 纯叙事→entry-152，无脚本
+  // entry-133: 侦查检定（奖励骰），parser处理，无额外效果
+  // entry-134: 敏捷检定，parser处理，无额外效果
+  // entry-135: 纯叙事+选择，无脚本
+  "entry-136": [{ type: "adjustSkill", skill: "博物学", value: 1 }],
+  // entry-137: 纯叙事→entry-156，无脚本
+  // entry-138: 话术/魅惑/说服检定，parser处理，无额外效果
+  // entry-139: 纯叙事→entry-108，无脚本
+  // entry-140: 纯叙事→entry-120，无脚本
+  "entry-141": [
+    { type: "setFlag", key: "nightCheckSuccess", value: true },
+    { type: "adjustSan", diceExpr: "1D2", sign: -1, checkGated: true }
+  ],
+  // entry-142: 纯叙事+选择，无脚本
+  "entry-143": [{ type: "adjustSkill", skill: "博物学", value: 2 }],
+  // entry-144: 汽车驾驶/心理学检定，parser处理，无额外效果
+  // entry-145: 纯叙事→entry-157，无脚本
+  "entry-146": [{ type: "tickSkill", skill: "乔装" }],
+  // entry-147: 纯叙事+选择，无脚本
+  // entry-148: 纯叙事→entry-18，无脚本
+  // entry-149: 纯叙事+选择，无脚本
+  // entry-150: 对抗检定（startCombat已定义），保留
+
+  // ─── entry-151 到 entry-175 ───
+  // entry-151: 纯叙事→entry-157，无脚本
+  // entry-152: 潜行检定，parser处理，无额外效果
+  // entry-153: 纯叙事+选择，无脚本
+  "entry-154": [{ type: "adjustHp", value: 1 }],
+  // entry-155: 对抗检定（startCombat已定义），保留
+  // entry-156: 纯叙事+选择，无脚本
+  // entry-157: 纯叙事+选择，无脚本
+  "entry-158": [{ type: "tickSkill", skill: "潜行", checkGated: true }],
+  "entry-159": [{ type: "gainItem", item: "德比诗集《阿撒托斯及其他》" }],
+  // entry-160: 纯叙事→entry-25，无脚本
+  // entry-161: 纯叙事→entry-79，无脚本
+  "entry-162": [{ type: "tickSkill", skill: "心理学" }],
+  // entry-163: 纯叙事→entry-157，无脚本
+  // entry-164: 纯叙事+选择，无脚本
+  // entry-165: 图书馆使用检定，parser处理，无额外效果
+  "entry-166": [{
+    type: "custom",
+    fn: (state) => {
+      // 如果昨晚曾在技能检定中成功过（nightCheckSuccess flag），显示两个选项
+      // 否则直接跳 entry-192
+      if (!state.flags.nightCheckSuccess) {
+        state.conditionBranchResult = {
+          met: false,
+          targetIfTrue: "entry-178",
+          targetIfFalse: "entry-192",
+          labelIfTrue: "",
+          labelIfFalse: "昨晚没有特别发现，继续出发"
+        };
+      }
+    }
+  }],
+  // entry-167: 熊双爪攻击（复杂战斗），见遗留P5
+  // entry-168: 纯叙事→entry-185，无脚本
+  // entry-169: 纯叙事+选择，无脚本
+  // entry-170: 纯叙事→entry-108，无脚本
+  "entry-171": [
+    { type: "adjustSan", value: -1, checkGated: false },
+    // 理智检定失败额外扣1D4（checkGated），成功只扣1点（已在onEnter）
+    { type: "adjustSan", diceExpr: "1D4", sign: -1, checkGated: true },
+    { type: "adjustSkill", skill: "克苏鲁神话", value: 4 }
+    // 结局节点
+  ],
+  // entry-172: 纯叙事→entry-142，无脚本
+  // entry-173: 战斗（startCombat已定义），保留
+  "entry-174": [{ type: "tickSkill", skill: "汽车驾驶" }],
+  "entry-175": [{ type: "gainItem", item: "阿博加斯特仪式咒语" }],
+
+  // ─── entry-176 到 entry-200 ───
+  // entry-176: 困难力量检定，parser处理，无额外效果
+  "entry-177": [{ type: "tickSkill", skill: "图书馆使用" }],
+  // entry-178: 侦查检定，parser处理，无额外效果
+  // entry-179: 体质检定，parser处理，无额外效果
+  // entry-180: 纯叙事+选择，无脚本
+  // entry-181: 纯叙事+选择，无脚本
+  // entry-182: 纯叙事→entry-157，无脚本
+  // entry-183: 纯叙事→entry-108，无脚本
+  "entry-184": [{ type: "gainItem", item: "德比诗集《阿撒托斯及其他》" }],
+  // entry-185: 结局节点，无脚本
+  // entry-186: 纯叙事→entry-79，无脚本
+  // entry-187: 困难侦查检定，parser处理，无额外效果
+  // entry-188: 闪避检定，parser处理，无额外效果
+  // entry-189: 幸运检定，parser处理，无额外效果
+  // entry-190: 纯叙事→entry-108，无脚本
+  "entry-191": [{ type: "adjustSan", value: -1, checkGated: true }], // 检定失败才失去1点理智
+  // entry-192: 纯叙事→entry-218，无脚本
+  // entry-193: 结局节点，无脚本
+  // entry-194: 纯叙事+选择，无脚本
+  // entry-195: 理智检定，parser处理，无额外效果
+  // entry-196: 结局节点，无脚本
+  "entry-197": [{ type: "gainItem", item: "召唤天之火咒语" }],
+  "entry-198": [{
+    type: "custom",
+    fn: (state) => {
+      const spent = state.spellMpSpent ?? 0;
+      state.dynamicCheckTarget = Math.min(95, spent * 10);
+    }
+  }],
+  // entry-199: 纯叙事+选择，无脚本
+  // entry-200: 纯叙事→entry-169，无脚本
+
+  // ─── entry-201 到 entry-225 ───
+  "entry-201": [
+    { type: "tickSkill", skill: "格斗(斗殴)" },
+    { type: "adjustHp", value: 1, checkGated: true }
+  ],
+  "entry-202": [{ type: "gainItem", item: "号令天之火咒语" }],
+  "entry-203": [{ type: "adjustHp", diceExpr: "1D6", sign: -1 }],
+  // entry-204: 纯叙事→entry-152，无脚本
+  // entry-205: 纯叙事→entry-27，无脚本
+  // entry-206: 纯叙事→entry-221，无脚本
+  // entry-207: 敏捷检定，parser处理，无额外效果
+  // entry-208: 攀爬检定（含大失败），parser处理，无额外效果
+  "entry-209": [{ type: "adjustSan", diceExpr: "1D3", sign: -1 }],
+  // entry-210: 纯叙事→entry-236，无脚本
+  "entry-211": [{ type: "tickSkill", skill: "潜行" }],
+  // entry-212: 纯叙事→entry-192，无脚本
+  // entry-213: 纯叙事→entry-120，无脚本
+  // entry-214: 纯叙事→entry-221，无脚本
+  // entry-215: 纯叙事→entry-264，无脚本
+  // entry-216: 纯叙事+选择，无脚本
+  "entry-217": [
+    { type: "adjustHp", diceExpr: "1D2", sign: -1 },
+    { type: "adjustSan", diceExpr: "1D3", sign: -1 }
+  ],
+  // entry-218: 纯叙事→entry-6，无脚本
+  // entry-219: 纯叙事+选择，无脚本
+  // entry-220: 结局节点，无脚本
+  // entry-221: 纯叙事+选择，无脚本
+  "entry-222": [{
+    type: "custom",
+    fn: (state) => {
+      const hp = state.character.stats?.hp?.current ?? 1;
+      const newHp = Math.max(0, hp - 1);
+      state.character.stats.hp.current = newHp;
+      state.character.derived.HP_current = newHp;
+      state.conditionBranchResult = {
+        met: newHp <= 0,
+        targetIfTrue: "entry-13",
+        targetIfFalse: "entry-228",
+        labelIfTrue: "耐久值归零，跌落重伤",
+        labelIfFalse: "受了1点伤，继续攀爬"
+      };
+    }
+  }],
+  // entry-223: 结局节点，无脚本
+  // entry-224: 纯叙事→entry-26，无脚本
+  "entry-225": [{ type: "tickSkill", skill: "锁匠", checkGated: true }],
+
+  // ─── entry-226 到 entry-250 ───
+  // entry-226: 纯叙事（职业介绍：医生）→entry-128，无脚本
+  // entry-227: 纯叙事→entry-259，无脚本
+  // entry-228: 纯叙事→entry-246，无脚本
+  // entry-229: 纯叙事→entry-223，无脚本
+  // entry-230: 纯叙事+选择，无脚本
+  // entry-231: 结局节点，无脚本
+  // entry-232: 力量检定，parser处理，无额外效果
+  // entry-233: 纯叙事→entry-134，无脚本
+  // entry-234: 纯叙事+选择，无脚本
+  // entry-235: 战斗（startCombat已定义），保留
+  // entry-236: 纯叙事+选择，无脚本
+  "entry-237": [{ type: "adjustSkill", skill: "克苏鲁神话", value: 2 }],
+  // entry-238: 纯叙事→entry-120，无脚本
+  // entry-239: 纯叙事（职业介绍：记者）→entry-128，无脚本
+  "entry-240": [{ type: "tickSkill", skill: "聆听" }],
+  "entry-241": [{ type: "tickSkill", skill: "格斗(斗殴)" }],
+  // entry-242: 纯叙事→entry-157，无脚本
+  // entry-243: 结局节点，无脚本
+  // entry-244: 纯叙事+选择，无脚本
+  // entry-245: 纯叙事→entry-259，无脚本
+  // entry-246: 理智检定，parser处理，无额外效果
+  // entry-247: 结局节点，无脚本
+  // entry-248: 第二天夜晚→第三天早晨，清除 penaltyDay
+  "entry-248": [{ type: "setFlag", key: "penaltyDay", value: false }],
+  // entry-249: 纯叙事（职业介绍：私家侦探）→entry-128，无脚本
+  "entry-250": [{ type: "adjustSan", diceExpr: "1D2", sign: -1, checkGated: true }],
+
+  // ─── entry-251 到 entry-270 ───
+  // entry-251: 纯叙事→entry-267，无脚本
+  "entry-252": [{ type: "adjustHp", diceExpr: "1D3", sign: -1 }],
+  // entry-253: 纯叙事→entry-160，无脚本
+  // entry-254: 纯叙事+选择，无脚本
+  // entry-255: 结局节点，无脚本
+  // entry-256: 纯叙事+选择，无脚本
+  // entry-257: 纯叙事→entry-267，无脚本
+  "entry-258": [
+    { type: "adjustSan", diceExpr: "1D2", sign: -1 },
+    { type: "adjustHp", diceExpr: "1D3", sign: -1 }
+  ],
+  // entry-259: 纯叙事→entry-160，无脚本
+  // entry-260: 恐吓检定，parser处理，无额外效果
+  // entry-261: 纯叙事→entry-71，无脚本
+  // entry-262: 战斗（startCombat已定义），保留
+  // entry-263: 纯叙事→entry-8，无脚本
+  // entry-264: 理智检定，parser处理，无额外效果
+  // entry-265: 纯叙事（职业介绍：教授）→entry-128，无脚本
+  // entry-266: 第二天夜晚节点，清除 penaltyDay（若走entry-26路径会重新设置）
+  "entry-266": [{ type: "setFlag", key: "penaltyDay", value: false }],
+  // entry-267: 纯叙事→entry-4，无脚本
+  "entry-268": [{ type: "tickSkill", skill: "格斗(斗殴)" }],
+  "entry-269": [{ type: "adjustSan", value: -1 }],
+  // entry-270: 结局节点，无脚本
+
+  // ─── 战斗场景（保留）───
   "entry-150": [{ type: "startCombat", scriptId: "entry-150" }],
   "entry-155": [{ type: "startCombat", scriptId: "entry-155" }],
   "entry-173": [{ type: "startCombat", scriptId: "entry-173" }],

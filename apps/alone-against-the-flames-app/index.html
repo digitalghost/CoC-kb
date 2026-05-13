@@ -6,7 +6,7 @@
   <title>向火独行 · 电子陪跑</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai:wght@300;400;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital,wght@0,400;1,400&family=LXGW+WenKai:wght@300;400;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/combat.css">
 </head>
@@ -18,165 +18,119 @@
       <div class="header-copy">
         <p class="eyebrow">Alone Against the Flames</p>
         <h1>向火独行</h1>
-        <p class="subtitle">先把它做成一个一眼能试玩的单人模组界面，再慢慢把正文与规则填满。</p>
+        <p class="subtitle">1920年代 · 单人模组 · 克苏鲁的呼唤</p>
       </div>
 
       <div class="header-actions">
-        <div class="build-chip">
-          <span class="build-label">原型阶段</span>
-          <strong id="buildStatus">界面优先</strong>
-        </div>
-        <button type="button" class="ghost-button" id="importCharacterButton">导入角色卡</button>
-        <button type="button" class="ghost-button" id="clearCharacterButton">恢复示例角色</button>
-        <button type="button" class="ghost-button" id="resetRunButton">重开当前流程</button>
+        <button type="button" class="icon-button" id="importCharacterButton" title="导入角色卡">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </button>
+        <button type="button" class="icon-button" id="clearCharacterButton" title="恢复示例角色">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </button>
+        <button type="button" class="icon-button" id="resetRunButton" title="重开当前流程">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1 4 1 10 7 10"/>
+            <path d="M3.51 15a9 9 0 1 0 .49-3.5"/>
+          </svg>
+        </button>
       </div>
     </header>
 
     <input type="file" id="characterFileInput" accept=".coc7,application/json" hidden>
 
-    <section class="overview-band">
-      <div class="overview-card">
-        <span class="overview-label">当前节点</span>
-        <strong id="overviewNodeId">entry-1</strong>
-      </div>
-      <div class="overview-card">
-        <span class="overview-label">已走节点</span>
-        <strong id="overviewSteps">0</strong>
-      </div>
-      <div class="overview-card">
-        <span class="overview-label">已触发标记</span>
-        <strong id="overviewFlags">0</strong>
-      </div>
-      <div class="overview-card">
-        <span class="overview-label">已解锁结局</span>
-        <strong id="overviewEndings">0</strong>
-      </div>
-    </section>
+    <div class="chapter-progress-bar" id="chapterProgressBar">
+      <button class="cpb-nav-toggle" id="cpbNavToggle" title="展开导航">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+      <div class="cpb-track" id="cpbTrack"></div>
+    </div>
 
-    <main class="experience-grid">
-      <aside class="rail rail-left">
-        <section class="panel-card sticky-card">
-          <div class="act-banner">
-            <div class="act-label" id="currentActLabel">第一幕</div>
-            <div class="act-title" id="currentActTitle">抵达</div>
-            <div class="act-description" id="currentActDescription">长途车与初到烬头村。</div>
-          </div>
-          <div class="journey-meta" id="journeyMeta">已走过 0 个节点</div>
-          <div class="debug-jump">
-            <input type="number" id="debugJumpInput" min="1" max="270" placeholder="条目 N" />
-            <button type="button" id="debugJumpButton">跳到条目</button>
-          </div>
-        </section>
-
-        <section class="panel-card">
-          <div class="panel-header">
-            <h2>叙事脉络</h2>
-            <span class="panel-note">关键转折</span>
-          </div>
-          <div class="milestone-timeline" id="milestoneTimeline"></div>
-        </section>
-
-        <section class="panel-card">
-          <div class="panel-header">
-            <h2>章节</h2>
-          </div>
-          <ul class="chapter-progress" id="chapterProgress"></ul>
-        </section>
-      </aside>
+    <main class="story-layout" id="storyLayout">
+      <div class="nav-drawer" id="navDrawer">
+        <aside class="rail rail-left">
+          <section class="panel-card sticky-card">
+            <div class="act-banner">
+              <div class="act-label" id="currentActLabel">第一幕</div>
+              <div class="act-title" id="currentActTitle">抵达</div>
+              <div class="act-description" id="currentActDescription">长途车与初到烬头村。</div>
+            </div>
+            <div class="journey-meta" id="journeyMeta">已走过 0 个节点</div>
+            <div class="debug-jump">
+              <input type="number" id="debugJumpInput" min="1" max="270" placeholder="条目 N" />
+              <button type="button" id="debugJumpButton">跳到条目</button>
+            </div>
+          </section>
+          <section class="panel-card">
+            <div class="panel-header">
+              <h2>叙事脉络</h2>
+              <span class="panel-note">关键转折</span>
+            </div>
+            <div class="milestone-timeline" id="milestoneTimeline"></div>
+          </section>
+          <section class="panel-card">
+            <div class="panel-header">
+              <h2>章节</h2>
+            </div>
+            <ul class="chapter-progress" id="chapterProgress"></ul>
+          </section>
+        </aside>
+      </div>
 
       <section class="story-stage">
         <div class="scene-card">
-          <div class="scene-topline">
-            <div class="scene-meta-block">
-              <div class="scene-meta" id="sceneMeta"></div>
-              <h2 class="scene-title" id="sceneTitle"></h2>
-            </div>
-            <div class="scene-controls">
-              <button type="button" class="chip-button" id="openDiceButton">打开骰盘</button>
-              <button type="button" class="chip-button" id="jumpBackButton">回到上一节点</button>
-            </div>
-          </div>
-
-          <div class="scene-art" id="sceneArt">
-            <div class="scene-art-overlay">
-              <div class="overlay-badge">当前场景</div>
-              <div class="overlay-copy">
-                <strong id="sceneTitleOverlay">向火独行</strong>
-                <span id="sceneOverlayMeta">剧情主舞台</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="scene-status-row">
-            <div class="status-pill">
-              <span class="status-label">当前节点</span>
-              <strong id="currentNodeCode">-</strong>
-            </div>
-            <div class="status-pill">
-              <span class="status-label">路径阶段</span>
-              <strong id="currentSliceLabel">-</strong>
-            </div>
-            <div class="status-pill wide-pill">
-              <span class="status-label">最近路径</span>
-              <strong id="pathTrail">-</strong>
-            </div>
-          </div>
-
           <article class="scene-text" id="sceneText"></article>
           <div class="action-feedback" id="actionFeedback"></div>
           <div class="action-list" id="actionList"></div>
         </div>
-
-        <section class="panel-card timeline-card">
-          <div class="panel-header">
-            <h2>路径时间线</h2>
-            <span class="panel-note">最近节点</span>
-          </div>
-          <ol class="history-list" id="historyList"></ol>
-        </section>
       </section>
-
-      <aside class="rail rail-right">
-        <section class="panel-card character-panel" id="characterPanel"></section>
-
-        <section class="panel-card">
-          <div class="panel-header">
-            <h2>线索线程</h2>
-            <span class="panel-note">当前在追什么</span>
-          </div>
-          <div class="clue-thread-list" id="clueThreadList"></div>
-        </section>
-
-        <section class="panel-card">
-          <div class="panel-header">
-            <h2>剧情记录</h2>
-            <span class="panel-note">flags / adapters</span>
-          </div>
-          <div class="flag-cloud" id="flagCloud"></div>
-          <ul class="integration-list">
-            <li id="characterAdapterStatus"></li>
-            <li id="diceAdapterStatus"></li>
-            <li id="contentAdapterStatus"></li>
-          </ul>
-        </section>
-
-        <section class="panel-card">
-          <div class="panel-header">
-            <h2>快速检定</h2>
-            <span class="panel-note">DiceBox</span>
-          </div>
-          <div class="dice-shortcuts" id="diceShortcutList"></div>
-        </section>
-
-        <section class="panel-card echo-panel">
-          <div class="panel-header">
-            <h2>行动回声</h2>
-            <span class="panel-note">最近发生了什么</span>
-          </div>
-          <ol id="echoList"></ol>
-        </section>
-      </aside>
     </main>
+
+    <!-- 右下角浮动面板组 -->
+    <div class="float-panels" id="floatPanels">
+
+      <!-- 行动回声 -->
+      <div class="float-panel echo-float" id="echoFloat">
+        <button class="float-panel-tab" id="echoToggleBtn" title="行动回声">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span class="float-panel-tab-text" id="echoLastText">回声</span>
+        </button>
+        <div class="float-panel-body" id="echoBody" hidden>
+          <div class="float-panel-header">
+            <span>行动回声</span>
+            <button class="float-panel-close" id="echoCloseBtn">×</button>
+          </div>
+          <ol class="echo-panel" id="echoList"></ol>
+        </div>
+      </div>
+
+      <!-- 角色卡 -->
+      <div class="float-panel char-float" id="charFloat">
+        <button class="float-panel-tab char-tab" id="charExpandBtn" title="角色面板">
+          <div class="char-tab-portrait" id="charCollapsedPortrait"></div>
+          <div class="char-tab-stats" id="charCollapsedStats"></div>
+        </button>
+        <div class="float-panel-body char-body" id="charBody" hidden>
+          <div class="float-panel-header">
+            <span class="char-collapsed-name" id="charCollapsedName">调查员</span>
+            <button class="float-panel-close" id="charCloseBtn">×</button>
+          </div>
+          <section class="character-panel" id="characterPanel"></section>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <div id="combat-overlay" class="combat-overlay">

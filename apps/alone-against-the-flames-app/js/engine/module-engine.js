@@ -28,6 +28,7 @@ export function enterCurrentNode(moduleData, state) {
   }
 
   state.history.push(node.id);
+  state.conditionBranchResult = null; // 清除上一节点的条件分支结果
   state.lastAppliedEffects = applyEffects(state, node.onEnterEffects || []);
   state.thresholdResult = evaluateThresholdGate(node, state);
   if (node.endingId && !state.unlockedEndings.includes(node.endingId)) {
@@ -82,6 +83,10 @@ export function applyEffects(state, effects) {
         state.character.derived.HP_current = state.character.stats.hp.current;
         applied.push({ type: "adjustHp", value, label: `耐久 ${formatDelta(value)}` });
         pushEcho(state, `HP ${formatDelta(value)}`, value < 0 ? "negative" : "positive");
+        if (state.character.stats.hp.current <= 0) {
+          state.dead = true;
+          state.deathNodeId = state.currentNodeId;
+        }
         break;
       }
       case "adjustSan": {
@@ -147,6 +152,25 @@ export function applyEffects(state, effects) {
         applied.push({ type: "startCombat", label: "进入战斗" });
         pushEcho(state, "进入战斗", "negative");
         break;
+      case "conditionBranch": {
+        const statVal = resolveStatValue(state, effect.stat);
+        const condMet = evaluateCondition(statVal, effect.operator, effect.value);
+        state.conditionBranchResult = {
+          met: condMet,
+          targetIfTrue: effect.targetIfTrue,
+          targetIfFalse: effect.targetIfFalse,
+          labelIfTrue: effect.labelIfTrue,
+          labelIfFalse: effect.labelIfFalse,
+        };
+        applied.push({ type: "conditionBranch", label: `条件分支：${effect.stat} ${effect.operator} ${effect.value}` });
+        break;
+      }
+      case "custom": {
+        if (typeof effect.fn === "function") {
+          effect.fn(state, applyEffects);
+        }
+        break;
+      }
       default:
         pushEcho(state, `未实现 effect: ${effect.type}`, "neutral");
         break;
@@ -160,6 +184,34 @@ function resolveEffectValue(effect) {
     return rollDiceExpr(effect.diceExpr) * (effect.sign ?? 1);
   }
   return effect.value;
+}
+
+function resolveStatValue(state, statKey) {
+  const ch = state.character;
+  // 属性：STR/CON/SIZ/DEX/APP/INT/POW/EDU
+  if (ch.attributes && ch.attributes[statKey] !== undefined) return ch.attributes[statKey];
+  // 兼容 stats 结构
+  if (ch.stats) {
+    if (statKey === "HP") return ch.stats.hp?.current ?? 0;
+    if (statKey === "SAN") return ch.stats.san?.current ?? 0;
+    if (statKey === "MP") return ch.stats.mp?.current ?? 0;
+    if (statKey === "LUCK") return ch.stats.luck ?? 0;
+  }
+  // derived
+  if (ch.derived && ch.derived[statKey] !== undefined) return ch.derived[statKey];
+  return 0;
+}
+
+function evaluateCondition(val, operator, threshold) {
+  switch (operator) {
+    case "==": return val === threshold;
+    case "!=": return val !== threshold;
+    case "<=": return val <= threshold;
+    case ">=": return val >= threshold;
+    case "<":  return val < threshold;
+    case ">":  return val > threshold;
+    default:   return false;
+  }
 }
 
 function rollDiceExpr(expr) {
@@ -177,6 +229,7 @@ function pushEcho(state, text, tone) {
   state.echoes.unshift({
     text,
     tone,
+    nodeId: state.currentNodeId,
     at: Date.now()
   });
   state.echoes = state.echoes.slice(0, 8);

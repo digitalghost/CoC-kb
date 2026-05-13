@@ -4,7 +4,7 @@ import { module as aatfModule } from "./data/module.js";
 import { COMBAT_SCRIPTS } from "./data/combat-scripts.js";
 import { createInitialState, enterCurrentNode, getCurrentNode, jumpToNode, performAction, applyEffects } from "./engine/module-engine.js";
 import { createCombatState, startCombat, submitPlayerChoice, submitRollResult, getAvailableActions } from "./engine/combat-engine.js";
-import { renderApp } from "./ui/render.js";
+import { renderApp, initPathBarToggle, initCharPanelToggle, initEchoToggle, updatePathBar, updateEchoLastText, updateCharCollapsed, renderChapterProgressBar } from "./ui/render.js";
 import { renderCharacterPanel } from "./ui/character-panel.js";
 import { renderCombatOverlay, openCombatOverlay, closeCombatOverlay } from "./ui/combat-overlay.js";
 
@@ -39,6 +39,7 @@ let seedCharacter = characterAdapter.loadPersistedCharacter() || characterAdapte
 let state = createInitialState(aatfModule, seedCharacter);
 let pendingCheck = null;
 let lastCheckResolution = null;
+let isPushedRoll = false;
 let activeCombat = null;
 let activeCombatScript = null;
 initDiceAdapter();
@@ -50,6 +51,9 @@ if (!loadSavedState()) {
 bindCharacterControls();
 bindDebugJump();
 bindResetRun();
+initPathBarToggle();
+initCharPanelToggle();
+initEchoToggle();
 paint();
 
 function bindDebugJump() {
@@ -88,10 +92,48 @@ function paint() {
     onBack: handleBack,
     onOpenDice: handleOpenDice,
     onRollCheck: handleRollCheck,
-    onStartCombat: openCombat
+    onPushedRoll: handlePushedRoll,
+    onStartCombat: openCombat,
+    onMpSpend: handleMpSpend,
+    onSpendLuck: handleSpendLuck
   });
   renderCharacterPanel(state.character, document.getElementById("characterPanel"), state.skillTicks);
   mountDiceShortcuts(handleQuickRoll);
+  renderChapterProgressBar(state, chapterGroups, aatfModule.nodes);
+
+  // 更新路径条
+  const chapter = chapterGroups.find(ch => {
+    const node = aatfModule.nodes[state.currentNodeId];
+    return node && ch.id === node.sliceId;
+  }) || chapterGroups[0];
+  const actIndex = chapterGroups.indexOf(chapter) + 1;
+  const actLabel = `第${"一二三四五六"[actIndex - 1] || actIndex}幕`;
+  const nodeNum = (state.currentNodeId || "entry-1").replace("entry-", "");
+  updatePathBar(actLabel, nodeNum, state.history.length);
+
+  // 更新角色折叠态
+  const ch = state.character;
+  updateCharCollapsed({
+    name: ch.name,
+    occupation: ch.occupation,
+    portrait: ch.portrait,
+    hp: ch.stats?.hp?.current,
+    maxHp: ch.stats?.hp?.max,
+    san: ch.stats?.san?.current,
+    maxSan: ch.stats?.san?.max,
+    mp: ch.stats?.mp?.current,
+    maxMp: ch.stats?.mp?.max,
+    luck: ch.stats?.luck,
+    maxLuck: ch.derived?.Luck_max ?? ch.stats?.luck
+  });
+
+  // 更新行动回声最后一条
+  if (state.echoes && state.echoes.length) {
+    updateEchoLastText(state.echoes[0].text);
+  } else {
+    updateEchoLastText("暂无记录");
+  }
+
   saveState();
 }
 
@@ -107,6 +149,11 @@ function handleAction(actionId) {
   }
 
   performAction(aatfModule, state, actionId);
+  // 离开 entry-198 后清除施法临时状态
+  if (state.currentNodeId !== "entry-198") {
+    delete state.dynamicCheckTarget;
+    delete state.spellMpSpent;
+  }
   state.lastTransition = buildTransitionNotice(action, resolutionSnapshot, summarizeStateDelta(beforeSnapshot, state));
   pendingCheck = null;
   lastCheckResolution = null;
@@ -146,16 +193,19 @@ function handleQuickRoll(notation) {
   diceAdapter.quickRoll(notation);
 }
 
-function handleRollCheck(check) {
+function handleRollCheck(check, pushed = false) {
   const resolvedCheck = characterAdapter.resolveCheck(check, state.character);
   pendingCheck = resolvedCheck;
   lastCheckResolution = null;
+  isPushedRoll = pushed;
   const targetText = resolvedCheck?.target ? ` 对抗 ${resolvedCheck.target}` : "";
   const modeLabel = getCheckModeLabel(resolvedCheck?.mode || "regular");
-  const label = resolvedCheck?.label ? `${resolvedCheck.label}${targetText} · ${modeLabel} · ` : "";
+  const pushLabel = pushed ? "【孤注一掷】" : "";
+  const label = resolvedCheck?.label ? `${pushLabel}${resolvedCheck.label}${targetText} · ${modeLabel} · ` : "";
   state.echoes.unshift({
     text: `${label}准备检定 ${formatCheckNotation(resolvedCheck)}`,
     tone: "neutral",
+    nodeId: state.currentNodeId,
     at: Date.now()
   });
   state.echoes = state.echoes.slice(0, 8);
@@ -169,16 +219,78 @@ function handleRollCheck(check) {
   paint();
 }
 
+function handlePushedRoll(check) {
+  handleRollCheck(check, true);
+}
+
+function handleSpendLuck(luckCost) {
+  const luck = state.character.stats.luck;
+  if (luck < luckCost) return;
+
+  state.character.stats.luck = luck - luckCost;
+  state.character.derived.Luck = state.character.stats.luck;
+
+  // 把当前检定结果改为成功
+  lastCheckResolution = {
+    ...lastCheckResolution,
+    success: true,
+    rank: "regular",
+    outcomeLabel: "成功（幸运）",
+    luckSpent: luckCost
+  };
+
+  state.echoes.unshift({
+    text: `花费 ${luckCost} 点幸运，检定视为成功`,
+    tone: "positive",
+    nodeId: state.currentNodeId,
+    at: Date.now()
+  });
+  state.echoes = state.echoes.slice(0, 8);
+  paint();
+}
+
+function handleMpSpend(amount) {
+  const mp = state.character.stats?.mp?.current ?? 0;
+  const hp = state.character.stats?.hp?.current ?? 1;
+  const mpSpend = Math.min(amount, mp);
+  const hpSpend = amount - mpSpend;
+
+  state.character.stats.mp.current = mp - mpSpend;
+  state.character.derived.MP = state.character.stats.mp.current;
+  if (hpSpend > 0) {
+    state.character.stats.hp.current = Math.max(1, hp - hpSpend);
+    state.character.derived.HP = state.character.stats.hp.current;
+  }
+
+  state.spellMpSpent = amount;
+  state.flags.awaitingMpInput = false;
+  delete state.flags.mpInputMax;
+
+  state.echoes.unshift({
+    text: `施法：消耗 ${amount} 点（MP ${mpSpend}${hpSpend > 0 ? ` + HP ${hpSpend}` : ""}），成功率 ${amount * 10}%`,
+    tone: "neutral",
+    nodeId: state.currentNodeId,
+    at: Date.now()
+  });
+  state.echoes = state.echoes.slice(0, 8);
+
+  // 跳转到 entry-198
+  handleJump("entry-198");
+}
+
 function handleRollComplete(summary) {
   if (!pendingCheck || !summary) return;
 
   const resolution = evaluateCheckResult(pendingCheck, summary);
+  resolution.isPushed = isPushedRoll;
   lastCheckResolution = resolution;
   pendingCheck = null;
+  isPushedRoll = false;
 
   state.echoes.unshift({
     text: `${resolution.label}: ${resolution.roll} / ${resolution.target} -> ${resolution.outcomeLabel}`,
     tone: resolution.success ? "positive" : "negative",
+    nodeId: state.currentNodeId,
     at: Date.now()
   });
   state.echoes = state.echoes.slice(0, 8);
@@ -346,7 +458,10 @@ function saveState() {
     unlockedEndings: state.unlockedEndings,
     skillTicks: state.skillTicks || [],
     thresholdResult: state.thresholdResult || null,
+    conditionBranchResult: state.conditionBranchResult || null,
     pendingCombat: state.pendingCombat || null,
+    dead: state.dead || false,
+    deathNodeId: state.deathNodeId || null,
     selectedNodeId
   };
   try {
@@ -370,7 +485,10 @@ function loadSavedState() {
     state.unlockedEndings = snapshot.unlockedEndings || [];
     state.skillTicks = snapshot.skillTicks || [];
     state.thresholdResult = snapshot.thresholdResult || null;
+    state.conditionBranchResult = snapshot.conditionBranchResult || null;
     state.pendingCombat = snapshot.pendingCombat || null;
+    state.dead = snapshot.dead || false;
+    state.deathNodeId = snapshot.deathNodeId || null;
     selectedNodeId = snapshot.selectedNodeId || snapshot.currentNodeId;
     return true;
   } catch (e) {
@@ -389,26 +507,61 @@ function bindResetRun() {
 function decorateNodeChecks(node) {
   const resolveWithMode = (check) => {
     const resolved = characterAdapter.resolveCheck(check, state.character);
+    let baseMode = resolved.mode || "regular";
+    // penaltyDay flag：当天所有技能检定附加惩罚骰（不影响幸运、理智、伤害检定）
+    if (state.flags.penaltyDay && baseMode === "regular") {
+      const isExempt = check.type === "derived" && (check.key === "luck" || check.key === "san");
+      if (!isExempt) baseMode = "penalty";
+    }
     const withMode = {
       ...resolved,
-      mode: resolved.mode || "regular"
+      mode: baseMode
     };
     if (check.difficulty === "hard" && withMode.half) {
       withMode.target = withMode.half;
     } else if (check.difficulty === "extreme" && withMode.fifth) {
       withMode.target = withMode.fifth;
     }
+    // entry-198：施法检定目标值由玩家消耗MP点数动态决定
+    if (state.dynamicCheckTarget != null) {
+      withMode.target = state.dynamicCheckTarget;
+      withMode.half = Math.floor(state.dynamicCheckTarget / 2);
+      withMode.fifth = Math.floor(state.dynamicCheckTarget / 5);
+    }
     return withMode;
   };
+
+  const baseCheckHints = node.checkHints || [];
+
+  // entry-198：施法检定，checkHint 由消耗MP点数动态生成
+  const dynamicCheckHints = (node.id === "entry-198" && state.dynamicCheckTarget != null)
+    ? [{
+        type: "skill",
+        skill: "号令天之火",
+        label: "号令天之火",
+        description: `消耗 ${state.spellMpSpent ?? 0} 点，成功率 ${state.dynamicCheckTarget}%（96-100必然失败）`,
+        difficulty: "regular",
+        mode: "regular",
+        target: state.dynamicCheckTarget,
+        half: Math.floor(state.dynamicCheckTarget / 2),
+        fifth: Math.floor(state.dynamicCheckTarget / 5)
+      }]
+    : baseCheckHints.map((check) => resolveWithMode(check));
+
+  // entry-198：给 actions 补上检定门控（parser 因无 check-mention 而清空了 check）
+  const decoratedActions = (node.actions || []).map((action) => {
+    if (node.id === "entry-198" && state.dynamicCheckTarget != null) {
+      const outcome = /成功/.test(action.label) ? "success" : "failure";
+      return { ...action, check: { outcome } };
+    }
+    return { ...action, check: action.check ? resolveWithMode(action.check) : null };
+  });
 
   return {
     ...node,
     text: appendContextualSceneText(node, state),
-    checkHints: (node.checkHints || []).map((check) => resolveWithMode(check)),
-    actions: (node.actions || []).map((action) => ({
-      ...action,
-      check: action.check ? resolveWithMode(action.check) : null
-    }))
+    checkHints: dynamicCheckHints,
+    actions: decoratedActions
   };
 }
 
@@ -625,8 +778,15 @@ function canTakeAction(actionId) {
   if (!lastCheckResolution) return false;
   if (action.check.outcome === "success") return lastCheckResolution.success;
   if (action.check.outcome === "failure") {
-    if (lastCheckResolution.rank === "fumble") return false;
+    if (lastCheckResolution.isPushed) return false;
+    if (lastCheckResolution.rank === "fumble") {
+      const hasFumblePath = actions.some(a => a.check?.outcome === "fumble");
+      if (hasFumblePath) return false;
+    }
     return !lastCheckResolution.success;
+  }
+  if (action.check.outcome === "pushed_failure") {
+    return lastCheckResolution.isPushed && !lastCheckResolution.success;
   }
   if (action.check.outcome === "fumble") return lastCheckResolution.rank === "fumble";
   if (action.check.outcome === "non_fumble") return lastCheckResolution.rank !== "fumble";

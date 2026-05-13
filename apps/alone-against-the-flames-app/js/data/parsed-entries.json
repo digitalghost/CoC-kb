@@ -40,14 +40,7 @@
       "translatorNotes": [
         "如果你的HP归零"
       ],
-      "directives": [
-        {
-          "kind": "adjustHp",
-          "amount": "1",
-          "sign": 1,
-          "snippet": "走一样。 你可以回复1点耐久值。现 在前往[条目 108]。"
-        }
-      ]
+      "directives": []
     },
     "entry-3": {
       "id": "entry-3",
@@ -99,14 +92,7 @@
       ],
       "image": null,
       "isEnding": false,
-      "directives": [
-        {
-          "kind": "adjustSan",
-          "amount": "1D3",
-          "sign": -1,
-          "snippet": "你两脚一软—— 失去1D3点理智值。前往[条目 13]。"
-        }
-      ]
+      "directives": []
     },
     "entry-6": {
       "id": "entry-6",
@@ -249,14 +235,7 @@
       ],
       "image": null,
       "isEnding": false,
-      "directives": [
-        {
-          "kind": "adjustHp",
-          "amount": "1",
-          "sign": 1,
-          "snippet": "接受了急救，可以回复1点耐久值。 现在前往[条目 64]。"
-        }
-      ]
+      "directives": []
     },
     "entry-14": {
       "id": "entry-14",
@@ -1081,14 +1060,7 @@
       ],
       "image": null,
       "isEnding": false,
-      "directives": [
-        {
-          "kind": "adjustHp",
-          "amount": "1",
-          "sign": 1,
-          "snippet": "你受过伤，你可以回复1点耐久值。前往[条目 64]。"
-        }
-      ]
+      "directives": []
     },
     "entry-59": {
       "id": "entry-59",
@@ -1208,12 +1180,6 @@
           "kind": "check-mention",
           "skill": "力量",
           "snippet": "否则，进 行一次“力量”检定。如果你成功了，前往[条目 93]。如果你失败 了，前往[条目 77]。"
-        },
-        {
-          "kind": "adjustHp",
-          "amount": "1D6",
-          "sign": -1,
-          "snippet": "固。 你因为火焰受到1D6点耐久值伤害。如果你的耐久值因 此归零，你就会失去意识，被烈焰烧死！【"
         }
       ]
     },
@@ -1723,19 +1689,12 @@
       "jumps": [
         {
           "target": "entry-137",
-          "label": "失败时"
+          "label": "继续"
         }
       ],
       "image": null,
       "isEnding": true,
-      "directives": [
-        {
-          "kind": "adjustHp",
-          "amount": "1D6",
-          "sign": -1,
-          "snippet": "烟。 你因为火焰受到1D6点耐久值伤害。如果你的耐久值因 此归零，你就会失去意识，被烈焰烧死！【"
-        }
-      ]
+      "directives": []
     },
     "entry-94": {
       "id": "entry-94",
@@ -1808,22 +1767,6 @@
           "kind": "check-mention",
           "skill": "急救",
           "snippet": "你可以尝试一次「急救」检定。如果你成功了，回复1 点耐久值并在「急救」技能左边的小方框里打勾。 然后前往[条目 7"
-        },
-        {
-          "kind": "adjustHp",
-          "amount": "1",
-          "sign": 1,
-          "snippet": "。如果你成功了，回复1 点耐久值并在「急救」技能左边的小方框里打勾。 然后前往[条目 79]。"
-        },
-        {
-          "kind": "adjustHp",
-          "amount": "1D3",
-          "sign": -1,
-          "snippet": "往未知的地域。 失去1D3点耐久值。你可以用普通六面骰来投掷：只需 要将结果除以二，小数进位。这"
-        },
-        {
-          "kind": "tickSkill",
-          "skill": "急救"
         }
       ]
     },
@@ -2010,19 +1953,12 @@
       "jumps": [
         {
           "target": "entry-137",
-          "label": "失败时"
+          "label": "继续"
         }
       ],
       "image": null,
       "isEnding": true,
-      "directives": [
-        {
-          "kind": "adjustHp",
-          "amount": "1D6",
-          "sign": -1,
-          "snippet": "塔。 你因为火焰受到1D6点耐久值伤害。如果你的耐久值因 此归零，你就会失去意识，被烈焰烧死！【"
-        }
-      ]
+      "directives": []
     },
     "entry-110": {
       "id": "entry-110",
@@ -2215,10 +2151,6 @@
       "image": null,
       "isEnding": false,
       "directives": [
-        {
-          "kind": "tickSkill",
-          "skill": "侦查"
-        },
         {
           "kind": "tickSkill",
           "skill": "侦查"
@@ -2635,12 +2567,6 @@
           "kind": "check-mention",
           "skill": "理智",
           "snippet": "底发生了什么。 进行一次“理智”检定。如果你失败了，失去1D2点理智 值。你可以使用普通六面骰来投掷：1、2、3表示"
-        },
-        {
-          "kind": "adjustSan",
-          "amount": "2",
-          "sign": -1,
-          "snippet": "，4、5、6表示失去2点理智值。 你沿路返回莱德贝特的房子，手里抓着的提灯不住地 颤抖。当梅注意"
         }
       ]
     },
@@ -3185,12 +3111,6 @@
           "kind": "check-mention",
           "skill": "理智",
           "snippet": "你开始心绪不宁。进行一次“理智”检定。如果你成功了，失 去1点理智值。如果你失败了，失去1D4点理智值。你可以增 加"
-        },
-        {
-          "kind": "adjustSan",
-          "amount": "1D4",
-          "sign": -1,
-          "snippet": "。如果你失败了，失去1D4点理智值。你可以增 加4点「克苏鲁神话」技能。你将再也难以轻松入眠。"
         }
       ]
     },
@@ -3573,12 +3493,6 @@
           "kind": "check-mention",
           "skill": "理智",
           "snippet": "他拉下了头巾。 进行一次“理智”检定。如果你失败了，失去1点理智值。 然后前往[条目 199]。"
-        },
-        {
-          "kind": "adjustSan",
-          "amount": "1",
-          "sign": -1,
-          "snippet": "。如果你失败了，失去1点理智值。 然后前往[条目 199]。"
         }
       ]
     },
@@ -3685,14 +3599,7 @@
       ],
       "image": null,
       "isEnding": false,
-      "directives": [
-        {
-          "kind": "adjustMp",
-          "amount": "1",
-          "sign": -1,
-          "snippet": "号令群星。 你每消耗1点魔法值，就有10%的概率成功。比如你消 耗了6点魔法值，你要进行一次成功"
-        }
-      ]
+      "directives": []
     },
     "entry-199": {
       "id": "entry-199",
@@ -3741,16 +3648,6 @@
           "kind": "check-mention",
           "skill": "急救",
           "snippet": "你，你还可以尝试进行一次「急救」检定，若成功可以 回复1点耐久值。现在前往[条目 79]。"
-        },
-        {
-          "kind": "adjustHp",
-          "amount": "1",
-          "sign": 1,
-          "snippet": "定，若成功可以 回复1点耐久值。现在前往[条目 79]。"
-        },
-        {
-          "kind": "tickSkill",
-          "skill": "格斗(斗殴)"
         }
       ]
     },
@@ -3891,14 +3788,7 @@
       ],
       "image": null,
       "isEnding": false,
-      "directives": [
-        {
-          "kind": "adjustSan",
-          "amount": "1D3",
-          "sign": -1,
-          "snippet": "吟诵过的咒语。 失去1D3点理智值。如果这使你的理智值归零，前往 [条目 220]。 要号令群星"
-        }
-      ]
+      "directives": []
     },
     "entry-210": {
       "id": "entry-210",
@@ -4013,20 +3903,7 @@
       ],
       "image": null,
       "isEnding": false,
-      "directives": [
-        {
-          "kind": "adjustHp",
-          "amount": "1D2",
-          "sign": -1,
-          "snippet": "1D3点理智值。失去1D2点耐久值。前往[条目 45]。"
-        },
-        {
-          "kind": "adjustSan",
-          "amount": "1D3",
-          "sign": -1,
-          "snippet": "退缩—— （你）失去1D3点理智值。失去1D2点耐久值。前往[条目 45]。"
-        }
-      ]
+      "directives": []
     },
     "entry-218": {
       "id": "entry-218",
@@ -4560,14 +4437,7 @@
       ],
       "image": null,
       "isEnding": false,
-      "directives": [
-        {
-          "kind": "adjustHp",
-          "amount": "1D3",
-          "sign": -1,
-          "snippet": "黑暗中出现—— 失去1D3点耐久值。现在前往[条目 13]。"
-        }
-      ]
+      "directives": []
     },
     "entry-253": {
       "id": "entry-253",
@@ -4649,14 +4519,7 @@
       ],
       "image": null,
       "isEnding": false,
-      "directives": [
-        {
-          "kind": "adjustSan",
-          "amount": "1D2",
-          "sign": -1,
-          "snippet": "间撞上了 你。 失去1D2点理智值和1D3点耐久值。现在前往[条目 13]。"
-        }
-      ]
+      "directives": []
     },
     "entry-259": {
       "id": "entry-259",
@@ -4882,14 +4745,7 @@
       ],
       "image": null,
       "isEnding": false,
-      "directives": [
-        {
-          "kind": "adjustSan",
-          "amount": "1",
-          "sign": -1,
-          "snippet": "体直直倒下—— 失去1点理智值。前往[条目 13]。"
-        }
-      ]
+      "directives": []
     },
     "entry-270": {
       "id": "entry-270",

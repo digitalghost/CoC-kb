@@ -13,7 +13,10 @@ export function renderApp({
   onBack,
   onOpenDice,
   onRollCheck,
-  onStartCombat
+  onPushedRoll,
+  onStartCombat,
+  onMpSpend,
+  onSpendLuck
 }) {
   renderActBanner(currentNode, chapterGroups, state);
   renderMilestoneTimeline(state.flags, milestones);
@@ -24,9 +27,12 @@ export function renderApp({
     onAction,
     onBack,
     onRollCheck,
+    onPushedRoll,
     currentCheckResolution,
     pendingCombat,
-    onStartCombat
+    onStartCombat,
+    onMpSpend,
+    onSpendLuck
   );
   renderClueThreads(state.flags, currentNode.id, onJump);
   renderFlags(state.flags);
@@ -37,14 +43,13 @@ export function renderApp({
   const resetButton = document.getElementById("resetRunButton");
   resetButton.onclick = onReset;
 
-  const openDiceButton = document.getElementById("openDiceButton");
-  openDiceButton.onclick = onOpenDice;
-
-  const ending = currentNode.endingId
+  const ending = (currentNode.endingId && state.dead)
     ? moduleData.endings?.find((item) => `ending-${item.num}` === currentNode.endingId)
     : null;
   const feedback = document.getElementById("actionFeedback");
-  if (ending) {
+  if (state.dead && !ending) {
+    renderDeathRecap(state, onReset);
+  } else if (ending) {
     renderEndingRecap(ending, state, milestones, onReset);
   } else if (!feedback.childElementCount) {
     feedback.textContent = "";
@@ -59,11 +64,6 @@ function renderActBanner(currentNode, chapterGroups, state) {
   document.getElementById("currentActTitle").textContent = chapter.label.replace(/^第.幕 · /, "");
   document.getElementById("currentActDescription").textContent = chapter.description;
   document.getElementById("journeyMeta").textContent = `已走过 ${state.history.length} 个节点`;
-
-  document.getElementById("overviewNodeId").textContent = currentNode.id;
-  document.getElementById("overviewSteps").textContent = `${state.history.length}`;
-  document.getElementById("overviewFlags").textContent = `${Object.keys(state.flags).length}`;
-  document.getElementById("overviewEndings").textContent = `${state.unlockedEndings.length}`;
 }
 
 function toChineseNum(n) {
@@ -129,31 +129,35 @@ function renderStory(
   onAction,
   onBack,
   onRollCheck,
+  onPushedRoll,
   currentCheckResolution,
   pendingCombat,
-  onStartCombat
+  onStartCombat,
+  onMpSpend,
+  onSpendLuck
 ) {
   const feedback = document.getElementById("actionFeedback");
   feedback.innerHTML = "";
   feedback.textContent = "";
 
-  document.getElementById("sceneMeta").textContent = (node.tags || []).join(" / ");
-  document.getElementById("sceneTitle").textContent = node.title;
-  document.getElementById("sceneText").innerHTML = formatSceneText(node.text);
-  document.getElementById("sceneTitleOverlay").textContent = node.title;
-  document.getElementById("sceneOverlayMeta").textContent = (node.tags || []).join(" · ");
-  document.getElementById("currentNodeCode").textContent = node.id;
-  document.getElementById("currentSliceLabel").textContent = inferPhase(node);
-  document.getElementById("pathTrail").textContent = state.history.slice(-4).join(" -> ") || "-";
-  renderTransitionBanner(state.lastTransition);
+  const sceneText = document.getElementById("sceneText");
+  sceneText.innerHTML = formatSceneText(node.text);
 
-  renderSceneArt(node.image);
+  // 内嵌图片（插在故事文字前）
+  const existingImg = document.getElementById("sceneInlineImage");
+  if (existingImg) existingImg.remove();
+  if (node.image) {
+    const img = document.createElement("img");
+    img.id = "sceneInlineImage";
+    img.className = "scene-inline-image";
+    img.src = node.image;
+    img.alt = node.title || "";
+    sceneText.parentNode.insertBefore(img, sceneText);
+  }
+
+  renderTransitionBanner(state.lastTransition);
   renderDirectiveBadges(node.directives || []);
   renderEffectNotices(state.lastAppliedEffects || [], state.thresholdResult);
-
-  const backButton = document.getElementById("jumpBackButton");
-  backButton.disabled = state.history.length <= 1;
-  backButton.onclick = onBack;
 
   const actionList = document.getElementById("actionList");
   actionList.innerHTML = "";
@@ -176,9 +180,81 @@ function renderStory(
     return;
   }
 
+  // entry-90：施法消耗MP选择器
+  if (state.flags.awaitingMpInput) {
+    const maxSpend = state.flags.mpInputMax ?? 10;
+    const mp = state.character.stats?.mp?.current ?? 0;
+    const hp = state.character.stats?.hp?.current ?? 1;
+
+    const container = document.createElement("div");
+    container.className = "mp-spend-container";
+
+    let selected = Math.min(1, maxSpend);
+
+    const updateDisplay = () => {
+      const mpCost = Math.min(selected, mp);
+      const hpCost = selected - mpCost;
+      costEl.textContent = `消耗 MP ${mpCost}${hpCost > 0 ? ` + HP ${hpCost}` : ""}，成功率 ${selected * 10}%`;
+      minusBtn.disabled = selected <= 1;
+      plusBtn.disabled = selected >= maxSpend;
+      countEl.textContent = selected;
+    };
+
+    container.innerHTML = `
+      <div class="mp-spend-label">决定消耗的魔法值点数（最多 ${maxSpend} 点）</div>
+      <div class="mp-spend-note">MP 不足时可用 HP 补足，但 HP 不能归零。当前 MP: ${mp} / HP: ${hp}</div>
+      <div class="mp-spend-controls">
+        <button type="button" class="mp-btn mp-minus">−</button>
+        <span class="mp-count">1</span>
+        <button type="button" class="mp-btn mp-plus">＋</button>
+      </div>
+      <div class="mp-spend-cost"></div>
+      <button type="button" class="action-button is-recommended mp-confirm">确认消耗，前往施法</button>
+    `;
+
+    const minusBtn = container.querySelector(".mp-minus");
+    const plusBtn = container.querySelector(".mp-plus");
+    const countEl = container.querySelector(".mp-count");
+    const costEl = container.querySelector(".mp-spend-cost");
+
+    minusBtn.onclick = () => { if (selected > 1) { selected--; updateDisplay(); } };
+    plusBtn.onclick = () => { if (selected < maxSpend) { selected++; updateDisplay(); } };
+    container.querySelector(".mp-confirm").onclick = () => onMpSpend(selected);
+
+    updateDisplay();
+    actionList.appendChild(container);
+    return;
+  }
+  if (state.conditionBranchResult) {
+    const branch = state.conditionBranchResult;
+    const target = branch.met ? branch.targetIfTrue : branch.targetIfFalse;
+    const label = branch.met ? branch.labelIfTrue : branch.labelIfFalse;
+    const row = document.createElement("div");
+    row.className = "action-row";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "action-button is-recommended";
+    btn.innerHTML = `
+      <span class="action-main">
+        <span class="action-label">继续 →</span>
+        <span class="action-note">${label || ""}</span>
+      </span>
+    `;
+    btn.onclick = () => onAction(
+      (node.actions || []).find(a => a.next === target)?.id ||
+      (node.actions || [])[0]?.id
+    );
+    row.appendChild(btn);
+    actionList.appendChild(row);
+    return;
+  }
+
   renderCheckHints(
     node,
+    state,
     onRollCheck,
+    onPushedRoll,
+    onSpendLuck,
     currentCheckResolution
   );
 
@@ -193,7 +269,7 @@ function renderStory(
     const button = document.createElement("button");
     button.type = "button";
     const recommendationClass = getActionRecommendationClass(action.check, currentCheckResolution);
-    const gateState = getActionGateState(action.check, currentCheckResolution);
+    const gateState = getActionGateState(action.check, currentCheckResolution, node.actions);
     button.className = `action-button${recommendationClass ? ` ${recommendationClass}` : ""}`;
     if (gateState === "locked") {
       button.classList.add("is-locked");
@@ -230,7 +306,10 @@ function renderStory(
 
 function renderCheckHints(
   node,
+  state,
   onRollCheck,
+  onPushedRoll,
+  onSpendLuck,
   currentCheckResolution
 ) {
   const feedback = document.getElementById("actionFeedback");
@@ -259,6 +338,35 @@ function renderCheckHints(
       row.classList.add(`rank-${currentCheckResolution.rank}`);
       row.querySelector(".check-roll-button").remove();
       row.querySelector(".check-copy").appendChild(renderResolutionSummary(currentCheckResolution));
+
+      if (node.pushable && !currentCheckResolution.success && currentCheckResolution.rank !== "fumble" && !currentCheckResolution.isPushed) {
+        const pushBlock = document.createElement("div");
+        pushBlock.className = "push-roll-block";
+        pushBlock.innerHTML = `
+          <button type="button" class="push-roll-button">孤注一掷</button>
+          <small class="push-roll-hint">重掷一次，失败后果可能更严重</small>
+        `;
+        pushBlock.querySelector(".push-roll-button").addEventListener("click", () => onPushedRoll(hint));
+        row.querySelector(".check-copy").appendChild(pushBlock);
+      }
+
+      // 幸运消耗：检定失败后显示花费幸运通过的选项
+      if (!currentCheckResolution.success && currentCheckResolution.rank !== "fumble" && !currentCheckResolution.luckSpent) {
+        const roll = currentCheckResolution.roll;
+        const target = currentCheckResolution.target;
+        const luckCost = roll - target;
+        const currentLuck = state.character.stats?.luck ?? 0;
+        if (luckCost > 0 && currentLuck >= luckCost) {
+          const luckBlock = document.createElement("div");
+          luckBlock.className = "push-roll-block";
+          luckBlock.innerHTML = `
+            <button type="button" class="luck-spend-button">花费 ${luckCost} 点幸运通过</button>
+            <small class="push-roll-hint">当前幸运 ${currentLuck}，花费后剩余 ${currentLuck - luckCost}</small>
+          `;
+          luckBlock.querySelector(".luck-spend-button").addEventListener("click", () => onSpendLuck(luckCost));
+          row.querySelector(".check-copy").appendChild(luckBlock);
+        }
+      }
     }
 
     const rollTrigger = row.querySelector(".check-roll-button");
@@ -289,19 +397,28 @@ function renderCheckTargetMeta(check) {
 function getActionRecommendationClass(check, resolution) {
   if (!check || !resolution || check.outcome == null) return "";
   if (check.outcome === "success" && resolution.success) return "is-recommended";
-  if (check.outcome === "failure" && !resolution.success && resolution.rank !== "fumble") return "is-recommended";
+  if (check.outcome === "failure" && !resolution.success && resolution.rank !== "fumble" && !resolution.isPushed) return "is-recommended";
+  if (check.outcome === "pushed_failure" && resolution.isPushed && !resolution.success) return "is-recommended";
   if (check.outcome === "fumble" && resolution.rank === "fumble") return "is-recommended";
   if (check.outcome === "non_fumble" && resolution.rank !== "fumble") return "is-recommended";
   return "is-muted";
 }
 
-function getActionGateState(check, resolution) {
+function getActionGateState(check, resolution, nodeActions) {
   if (!check || check.outcome == null) return "free";
   if (!resolution) return "hidden";
   if (check.outcome === "success" && resolution.success) return "free";
   if (check.outcome === "failure") {
-    if (resolution.rank === "fumble") return "hidden";
+    if (resolution.isPushed) return "hidden";
+    if (resolution.rank === "fumble") {
+      const hasFumblePath = nodeActions && nodeActions.some(a => a.check?.outcome === "fumble");
+      if (hasFumblePath) return "hidden";
+    }
     if (!resolution.success) return "free";
+  }
+  if (check.outcome === "pushed_failure") {
+    if (resolution.isPushed && !resolution.success) return "free";
+    return "hidden";
   }
   if (check.outcome === "fumble" && resolution.rank === "fumble") return "free";
   if (check.outcome === "non_fumble" && resolution.rank !== "fumble") return "free";
@@ -484,6 +601,7 @@ function renderTransitionBanner(transition) {
 
 function renderFlags(flags) {
   const flagCloud = document.getElementById("flagCloud");
+  if (!flagCloud) return;
   flagCloud.innerHTML = "";
   const entries = Object.entries(flags);
 
@@ -505,6 +623,7 @@ function renderFlags(flags) {
 
 function renderClueThreads(flags, currentNodeId, onJump) {
   const container = document.getElementById("clueThreadList");
+  if (!container) return;
   container.innerHTML = "";
 
   const empty = document.createElement("div");
@@ -517,9 +636,12 @@ function renderClueThreads(flags, currentNodeId, onJump) {
 }
 
 function renderAdapterStatuses(adapterStatuses) {
-  document.getElementById("characterAdapterStatus").textContent = `角色 adapter: ${adapterStatuses.character}`;
-  document.getElementById("diceAdapterStatus").textContent = `骰子 adapter: ${adapterStatuses.dice}`;
-  document.getElementById("contentAdapterStatus").textContent = `内容 adapter: ${adapterStatuses.content}`;
+  const charEl = document.getElementById("characterAdapterStatus");
+  const diceEl = document.getElementById("diceAdapterStatus");
+  const contentEl = document.getElementById("contentAdapterStatus");
+  if (charEl) charEl.textContent = `角色 adapter: ${adapterStatuses.character}`;
+  if (diceEl) diceEl.textContent = `骰子 adapter: ${adapterStatuses.dice}`;
+  if (contentEl) contentEl.textContent = `内容 adapter: ${adapterStatuses.content}`;
 }
 
 function buildClueThreads(flags) {
@@ -670,6 +792,54 @@ function renderEndingRecap(ending, state, milestones, onReset) {
   container.appendChild(recap);
 }
 
+function renderDeathRecap(state, onReset) {
+  const container = document.getElementById("sceneText");
+  container.innerHTML = "";
+  const actionList = document.getElementById("actionList");
+  if (actionList) actionList.innerHTML = "";
+
+  const deathNodeNum = (state.deathNodeId || "").replace("entry-", "");
+  const skillTicks = state.skillTicks || [];
+
+  const recap = document.createElement("div");
+  recap.className = "ending-recap tone-death";
+  recap.innerHTML = `
+    <div class="ending-recap-header">
+      <span class="ending-tone-icon">💀</span>
+      <div class="ending-recap-title">
+        <h3>耐久值归零</h3>
+        <span class="ending-tone-label">死亡结局</span>
+      </div>
+    </div>
+    <p class="ending-recap-summary">你的伤势过重，失去了意识，再也没有醒来。${deathNodeNum ? `（条目 ${deathNodeNum}）` : ""}</p>
+    <div class="ending-recap-stats">
+      <div class="ending-stat">
+        <span class="ending-stat-label">路径长度</span>
+        <span class="ending-stat-value">${state.history.length} 步</span>
+      </div>
+      <div class="ending-stat">
+        <span class="ending-stat-label">耐久</span>
+        <span class="ending-stat-value">0 / ${state.character.stats?.hp?.max ?? "?"}</span>
+      </div>
+      <div class="ending-stat">
+        <span class="ending-stat-label">理智</span>
+        <span class="ending-stat-value">${state.character.stats?.san?.current ?? "?"}</span>
+      </div>
+    </div>
+    ${skillTicks.length ? `
+    <div class="ending-recap-section">
+      <h4>技能成长</h4>
+      <div class="ending-skill-ticks">
+        ${skillTicks.map((s) => `<span class="ending-skill-pill">${s}</span>`).join("")}
+      </div>
+    </div>` : ""}
+    <button type="button" class="ending-restart-button">重新开始冒险</button>
+  `;
+
+  recap.querySelector(".ending-restart-button").addEventListener("click", onReset);
+  container.appendChild(recap);
+}
+
 function getEndingToneIcon(tone) {
   switch (tone) {
     case "death": return "💀";
@@ -698,15 +868,32 @@ function renderEchoes(echoes) {
 
   echoes.forEach((echo) => {
     const li = document.createElement("li");
-    li.textContent = echo.text;
+    if (echo.nodeId) {
+      const nodeNum = echo.nodeId.replace("entry-", "");
+      const tag = document.createElement("span");
+      tag.className = "echo-node-tag";
+      tag.textContent = `#${nodeNum}`;
+      li.appendChild(tag);
+    }
+    const textSpan = document.createElement("span");
+    textSpan.textContent = echo.text;
+    li.appendChild(textSpan);
     if (echo.tone === "positive") li.classList.add("is-positive");
     if (echo.tone === "negative") li.classList.add("is-negative");
     echoList.appendChild(li);
   });
+
+  // 更新 tab 上的最后一条文字
+  const lastTextEl = document.getElementById('echoLastText');
+  if (lastTextEl && echoes.length) {
+    const last = echoes[echoes.length - 1].text;
+    lastTextEl.textContent = last.slice(0, 28) + (last.length > 28 ? '…' : '');
+  }
 }
 
 function renderHistory(history, nodeMap) {
   const historyList = document.getElementById("historyList");
+  if (!historyList) return;
   historyList.innerHTML = "";
 
   history
@@ -794,4 +981,148 @@ function applyHighlights(text) {
   );
 
   return text;
+}
+
+// ─── 路径条 + 导航抽屉交互 ───
+
+export function initPathBarToggle() {
+  const toggle = document.getElementById('cpbNavToggle');
+  const layout = document.getElementById('storyLayout');
+  if (!toggle || !layout) return;
+  toggle.addEventListener('click', () => {
+    const open = layout.classList.toggle('drawer-open');
+    toggle.classList.toggle('is-open', open);
+  });
+}
+
+// 角色面板折叠交互
+export function initCharPanelToggle() {
+  const btn = document.getElementById('charExpandBtn');
+  const body = document.getElementById('charBody');
+  const closeBtn = document.getElementById('charCloseBtn');
+  if (!btn || !body) return;
+  btn.addEventListener('click', () => {
+    body.removeAttribute('hidden');
+  });
+  closeBtn && closeBtn.addEventListener('click', () => {
+    body.setAttribute('hidden', '');
+  });
+}
+
+// 行动回声折叠交互
+export function initEchoToggle() {
+  const toggleBtn = document.getElementById('echoToggleBtn');
+  const closeBtn = document.getElementById('echoCloseBtn');
+  const body = document.getElementById('echoBody');
+  if (!toggleBtn || !body) return;
+  toggleBtn.addEventListener('click', () => {
+    body.removeAttribute('hidden');
+  });
+  closeBtn && closeBtn.addEventListener('click', () => {
+    body.setAttribute('hidden', '');
+  });
+}
+
+// 更新路径条数据（path-bar 已移除，保留供 app.js 调用）
+export function updatePathBar(actLabel, nodeId, steps) {
+  // 章节进度条由 renderChapterProgressBar 负责，此函数为空桩
+}
+
+// 更新行动回声最后一条
+export function updateEchoLastText(text) {
+  const el = document.getElementById('echoLastText');
+  if (el) el.textContent = text || '暂无记录';
+}
+
+// 更新角色折叠态数据
+export function updateCharCollapsed(character) {
+  if (!character) return;
+  const nameEl = document.getElementById('charCollapsedName');
+  const statsEl = document.getElementById('charCollapsedStats');
+  const portraitEl = document.getElementById('charCollapsedPortrait');
+
+  if (nameEl) nameEl.textContent = character.name || '调查员';
+
+  if (portraitEl) {
+    if (character.portrait) {
+      portraitEl.innerHTML = `<img src="${character.portrait}" alt="">`;
+    } else {
+      portraitEl.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+    }
+  }
+
+  if (statsEl) {
+    const stats = [
+      {
+        label: 'HP', val: character.hp, max: character.maxHp, color: '#c86d5d',
+        icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`
+      },
+      {
+        label: 'SAN', val: character.san, max: character.maxSan, color: '#9788c8',
+        icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="10" ry="6"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>`
+      },
+      {
+        label: 'MP', val: character.mp, max: character.maxMp, color: '#67a7b8',
+        icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6 8 4 12 4 15a8 8 0 0 0 16 0c0-3-2-7-8-13z"/></svg>`
+      },
+      {
+        label: 'LCK', val: character.luck, max: character.maxLuck, color: '#d7b15a',
+        icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
+      },
+    ];
+    statsEl.innerHTML = stats.map(s => {
+      const pct = s.max ? s.val / s.max : 1;
+      const low = pct < 0.3 ? ' is-low' : '';
+      return `<div class="char-stat-chip">
+        <span class="char-stat-icon" style="color:${s.color}">${s.icon}</span>
+        <span class="char-stat-val${low}">${s.val ?? '—'}</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+// 章节进度条渲染
+export function renderChapterProgressBar(state, chapterGroups, nodes) {
+  const track = document.getElementById('cpbTrack');
+  if (!track) return;
+  track.innerHTML = '';
+
+  const history = state.history || [];
+  const currentId = state.currentNodeId;
+
+  // 显示历史路径 + 当前节点（去重，保持顺序）
+  const sequence = [...history];
+  if (currentId && sequence[sequence.length - 1] !== currentId) {
+    sequence.push(currentId);
+  }
+
+  sequence.forEach((nodeId, i) => {
+    // 连接线
+    if (i > 0) {
+      const line = document.createElement('div');
+      line.className = 'cpb-connector';
+      track.appendChild(line);
+    }
+
+    const num = nodeId.replace('entry-', '');
+
+    const dot = document.createElement('div');
+    dot.className = 'cpb-node--chapter';
+    if (nodeId === currentId) dot.classList.add('is-current');
+    else dot.classList.add('is-visited');
+
+    const dotInner = document.createElement('div');
+    dotInner.className = 'cpb-node-dot';
+    dot.appendChild(dotInner);
+
+    const label = document.createElement('span');
+    label.className = 'cpb-node-num';
+    label.textContent = num;
+    dot.appendChild(label);
+
+    track.appendChild(dot);
+  });
+
+  // 自动滚动到最右（当前节点）
+  track.scrollLeft = track.scrollWidth;
 }
