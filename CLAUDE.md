@@ -1,7 +1,7 @@
 # CLAUDE.md - CoC-kb 项目总览
 
 > 本文件是 AI 助手理解本项目的入口指引。
-> 最后更新: 2026-05-11
+> 最后更新: 2026-05-16
 
 ---
 
@@ -9,7 +9,7 @@
 
 **CoC-kb** 是一个围绕《克苏鲁的呼唤（Call of Cthulhu）第七版》TRPG 的综合项目，包含四大部分：
 
-1. **知识库** — 从官方规则书系统提取的 CoC 7e 规则 wiki（286+ 页面）
+1. **知识库** — 从官方规则书系统提取的 CoC 7e 规则 wiki（298+ 页面）
 2. **角色卡创建器** — 8 步引导式调查员角色创建工具
 3. **角色卡追踪器** — 模拟纸质角色卡的调查员数据追踪工具
 4. **向火独行** — 单人模组《向火独行》电子陪跑原型
@@ -28,7 +28,7 @@ CoC-kb/
 │   │   ├── index.md                   ← 内容索引（查找页面的入口）
 │   │   ├── log.md                     ← 操作日志（仅追加）
 │   │   ├── concepts/                  ← 概念页面（69个：规则、机制、系统）
-│   │   ├── entities/                  ← 实体页面（211个：生物、神祇、模组）
+│   │   ├── entities/                  ← 实体页面（223个：生物、神祇、模组）
 │   │   ├── synthesis/                 ← 合成分析（维护追踪、补全计划等）
 │   │   ├── images/                    ← 实体配图（~190张，AI 生成）
 │   │   └── sources/                   ← 来源摘要（6个规则书）
@@ -48,7 +48,7 @@ CoC-kb/
 ### 1. knowledge-base/ — 规则知识库
 
 - **主题**: 克苏鲁的呼唤第七版 TRPG 规则体系
-- **规模**: 69 个概念页面 + 211 个实体页面 + 6 个来源摘要
+- **规模**: 69 个概念页面 + 223 个实体页面 + 6 个来源摘要
 - **来源书籍**: 40周年纪念版(470页)、调查员手册(162页)、怪物之锤两卷(468页)、入门套件第一卷与第三卷
 - **维护规范**: 详见 `knowledge-base/CLAUDE.md`
 - **架构模式**: 基于 Karpathy 的 LLM Wiki 模式，分为三层：
@@ -138,7 +138,7 @@ CoC-kb/
 
 - **定位**: 单人模组《向火独行（Alone Against the Flames）》的电子陪跑工具
 - **技术栈**: 多文件 HTML/CSS/JS（ES Module），复用 character-tracker 的 DiceBox 3D 骰子库
-- **当前状态**: 核心引擎基本完成，可完整游玩 270 条目模组
+- **当前状态**: 核心引擎完成，可完整游玩 270 条目模组；节点图导航已实装
 - **架构**: engine/adapters/data/ui 四层代码边界
 - **核心功能**（已实现）:
   - 三栏体验布局（左侧快速入口+进度、中央剧情主舞台、右侧角色状态+线索）
@@ -147,7 +147,7 @@ CoC-kb/
   - DiceBox 3D 骰子面板（dice-adapter.js），支持百分骰/奖励骰/惩罚骰
   - 技能/属性/派生值检定系统（自动识别检定难度和模式）
   - 检定结果驱动路径分支（成功/失败/大失败门控）
-  - 对抗检定 & 多回合战斗系统（5 个战斗场景，弹出层 UI）
+  - 对抗检定 & 多回合战斗系统（6 个战斗场景，弹出层 UI）
   - 效果系统：HP/SAN/MP/Luck 调整、技能成长、物品获得/失去、战斗触发
   - 检定门控效果：属性损失仅在检定失败后触发
   - 伤害阈值自动分支（伤害 vs maxHP/2 决定路径）
@@ -155,6 +155,7 @@ CoC-kb/
   - 结局复盘页面（18 个结局，含路径/状态/里程碑/技能成长）
   - localStorage 游戏进度持久化
   - 路径时间线、线索线程、剧情记录面板
+  - **节点图导航**（graph-map.js）：Canvas 力导向图，可视化 270 条目的跳转关系，支持平移/缩放/悬停预览，已访问节点高亮
 - **待实现**:
   - 孤注一掷（Pushed Roll）
   - 幸运消耗（Spending Luck）
@@ -167,7 +168,7 @@ CoC-kb/
     app.css               ← 主样式
     combat.css            ← 战斗弹出层样式
   js/
-    app.js                ← 主入口（ES Module），状态管理，战斗集成
+    app.js                ← 主入口（ES Module），状态管理，战斗集成，图谱切换
     engine/
       module-engine.js    ← 模组引擎（节点流转、效果执行、阈值门控）
       opposed-roll.js     ← CoC 7e 对抗检定纯函数（成功等级比较）
@@ -178,13 +179,16 @@ CoC-kb/
     data/
       module.js           ← 数据适配层（parsed JSON → 引擎节点，ENTRY_SCRIPTS，THRESHOLD_GATES）
       parsed-entries.json ← 解析后的 270 条目原始数据
-      combat-scripts.js   ← 5 个战斗场景的声明式配置
+      combat-scripts.js   ← 6 个战斗场景的声明式配置
       skills-data.js      ← 技能数据
+      graph-data.json     ← 节点图数据（270 节点 + 422 跳转边）
     ui/
       render.js           ← UI 渲染函数
       character-panel.js  ← 角色面板渲染
       combat-overlay.js   ← 战斗弹出层 UI
-  assets/figures/         ← 模组插图（12 张）
+      graph-map.js        ← Canvas 力导向节点图（平移/缩放/悬停/已访问高亮）
+  assets/figures/         ← 模组插图（283 张，条目全覆盖）
+  assets/figures-v4/      ← 模组插图备用版本（272 张）
   scripts/
     parse-fulltext.mjs    ← 全文解析脚本（生成 parsed-entries.json）
   ```

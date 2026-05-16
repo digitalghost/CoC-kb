@@ -123,6 +123,23 @@ export const COMBAT_SCRIPTS = {
     }
   },
 
+  "entry-167": {
+    type: "dual-claw",
+    label: "熊的双爪攻击",
+    description: "熊在你身后咆哮，用双爪各攻击一次。每爪命中率 35%，造成 3D6 伤害。任一爪伤害达到你最大耐久值的一半即触发重伤。",
+    enemy: {
+      name: "黑熊",
+      claws: [
+        { id: "claw-left",  label: "左爪", skill: 35, damage: "3D6" },
+        { id: "claw-right", label: "右爪", skill: 35, damage: "3D6" }
+      ]
+    },
+    outcomes: {
+      majorWound: { next: "entry-179", summary: "你受到了重伤！" },
+      survive:    { next: "entry-186", summary: "你挺过了熊的双爪攻击。" }
+    }
+  },
+
   "entry-262": {
     type: "melee",
     label: "工匠搏斗",

@@ -10,6 +10,7 @@ export function createInitialState(moduleData, seedCharacter) {
     inventory: [...(seedCharacter.inventory || [])],
     flags: {},
     history: [],
+    visitedNodes: new Set(),
     echoes: [],
     unlockedEndings: [],
     skillTicks: [],
@@ -28,8 +29,16 @@ export function enterCurrentNode(moduleData, state) {
   }
 
   state.history.push(node.id);
-  state.conditionBranchResult = null; // 清除上一节点的条件分支结果
-  state.lastAppliedEffects = applyEffects(state, node.onEnterEffects || []);
+  state.conditionBranchResult = null;
+
+  // onceOnly 节点：重复进入时跳过 onEnterEffects，避免重复触发属性/物品变化
+  const alreadyVisited = state.visitedNodes.has(node.id);
+  if (!alreadyVisited) {
+    state.visitedNodes.add(node.id);
+  }
+  const effectsToApply = (node.onceOnly && alreadyVisited) ? [] : (node.onEnterEffects || []);
+  state.lastAppliedEffects = applyEffects(state, effectsToApply);
+
   state.thresholdResult = evaluateThresholdGate(node, state);
   if (node.endingId && !state.unlockedEndings.includes(node.endingId)) {
     state.unlockedEndings.push(node.endingId);
@@ -162,7 +171,7 @@ export function applyEffects(state, effects) {
           labelIfTrue: effect.labelIfTrue,
           labelIfFalse: effect.labelIfFalse,
         };
-        applied.push({ type: "conditionBranch", label: `条件分支：${effect.stat} ${effect.operator} ${effect.value}` });
+        // conditionBranch 是内部路由，不向玩家显示 pill
         break;
       }
       case "custom": {
@@ -190,6 +199,8 @@ function resolveStatValue(state, statKey) {
   const ch = state.character;
   // 属性：STR/CON/SIZ/DEX/APP/INT/POW/EDU
   if (ch.attributes && ch.attributes[statKey] !== undefined) return ch.attributes[statKey];
+  if (ch.effectiveAttrs && ch.effectiveAttrs[statKey] !== undefined) return ch.effectiveAttrs[statKey];
+  if (ch.rawAttrs && ch.rawAttrs[statKey] !== undefined) return ch.rawAttrs[statKey];
   // 兼容 stats 结构
   if (ch.stats) {
     if (statKey === "HP") return ch.stats.hp?.current ?? 0;

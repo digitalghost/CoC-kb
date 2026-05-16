@@ -7,25 +7,32 @@
 
 import parsed from "./parsed-entries.json" with { type: "json" };
 
+
 const CHAPTERS = [
-  { id: "chapter-1", label: "第一幕 · 抵达", description: "长途车与初到烬头村。", range: [1, 30], anchorNodeId: "entry-1" },
-  { id: "chapter-2", label: "第二幕 · 白昼调查", description: "村庄、文特斯、村会堂与图书。", range: [31, 100], anchorNodeId: "entry-31" },
-  { id: "chapter-3", label: "第三幕 · 入夜", description: "夜谈、夜潜与节日前夕。", range: [101, 200], anchorNodeId: "entry-154" },
-  { id: "chapter-4", label: "第四幕 · 火焰之夜", description: "灯塔、仪式与结局。", range: [201, 270], anchorNodeId: "entry-190" }
+  { id: "chapter-1", label: "第一幕 · 长途车", description: "长途车上的建卡与初识。", anchorNodeId: "entry-1" },
+  { id: "chapter-2", label: "第二幕 · 抵达烬头村", description: "进入梅家，初识村民。", anchorNodeId: "entry-4" },
+  { id: "chapter-3", label: "第三幕 · 白天调查", description: "探索村庄、文特斯与图书室。", anchorNodeId: "entry-6" },
+  { id: "chapter-4", label: "第四幕 · 入夜", description: "第一夜的夜谈与暗流。", anchorNodeId: "entry-63" },
+  { id: "chapter-5", label: "第五幕 · 第二天", description: "清晨醒来，深入调查。", anchorNodeId: "entry-64" },
+  { id: "chapter-6", label: "第六幕 · 火焰之夜", description: "被押往灯塔，仪式与结局。", anchorNodeId: "entry-117" }
 ];
 
 function toAction(jump, fromId, index) {
-  const isNumeric = /^\d+$/.test(jump.label || "");
+  const raw = (jump.label || "").trim();
+  // 纯数字、空字符串、纯标点引号、或"现在"/"然后"等过渡词，都显示"继续 →"
+  const isContinue = !raw
+    || /^\d+$/.test(raw)
+    || /^["""“”‘’\s]+$/.test(raw)
+    || /^[现在然后，。]+$/.test(raw);
   const action = {
     id: `${fromId}-choice-${index}`,
-    label: isNumeric ? "继续 →" : jump.label,
+    label: isContinue ? "继续 →" : raw,
     description: "",
     next: jump.target,
     effects: [],
     check: null
   };
-  const label = jump.label || "";
-  const outcome = classifyOutcome(label);
+  const outcome = classifyOutcome(raw);
   if (outcome) {
     action.check = { outcome };
   }
@@ -51,9 +58,285 @@ function classifyOutcome(label) {
   return null;
 }
 
+const SCENE_IMAGES = {
+  0: "opening-scene.jpg",
+  1: "entry-1-bus-station.jpg",
+  2: "entry-2-subdued.jpg",
+  3: "entry-3-leadbetter-daughter.jpg",
+  4: "entry-4-leadbetter-home.jpg",
+  5: "entry-5-burning-beasts.jpg",
+  6: "entry-6-village-panorama.jpg",
+  7: "entry-7-village-blocked.jpg",
+  8: "entry-8-loading-luggage.jpg",
+  9: "entry-9-ruth-warning.jpg",
+  10: "entry-10-fire-dancers.jpg",
+  11: "entry-11-town-hall.jpg",
+  12: "entry-12-escape-workshop.jpg",
+  13: "entry-13-rescued-farm.jpg",
+  14: "entry-14-may-silas.jpg",
+  15: "entry-15-may-ruth.jpg",
+  16: "entry-16-general-store.jpg",
+  17: "entry-17-bulletin-board.jpg",
+  18: "entry-18-lighthouse-ritual.jpg",
+  19: "entry-19-may-fear.jpg",
+  20: "entry-20-craftsman-reveal.jpg",
+  21: "entry-21-may-festival.jpg",
+  22: "entry-22-leaving-home.jpg",
+  23: "entry-23-driver-help.jpg",
+  24: "entry-24-mr-vents.jpg",
+  25: "entry-25-buying-supplies.jpg",
+  26: "entry-26-poisoned-morning.jpg",
+  27: "entry-27-robed-villagers.jpg",
+  28: "entry-28-leaving-village.jpg",
+  29: "entry-29-northern-recon.jpg",
+  30: "entry-30-window-secret.jpg",
+  31: "entry-31-may-village-life.jpg",
+  32: "entry-32-may-anger.jpg",
+  33: "entry-33-lighthouse-ceremony.jpg",
+  34: "entry-34-ruined-church.jpg",
+  35: "entry-35-coyote-howl.jpg",
+  36: "entry-36-cliff-fall.jpg",
+  37: "entry-37-meeting-vents.jpg",
+  38: "entry-38-struggling-luggage.jpg",
+  39: "entry-39-may-past.jpg",
+  40: "entry-40-flames-spread.jpg",
+  41: "entry-41-hesitation.jpg",
+  42: "entry-42-finding-overlook.jpg",
+  43: "entry-43-vents-office.jpg",
+  44: "entry-44-struggle-chains.jpg",
+  45: "entry-45-waking-up.jpg",
+  46: "entry-46-church-stable.jpg",
+  47: "entry-47-forest-fear.jpg",
+  48: "entry-48-climbing-escape.jpg",
+  49: "entry-49-vents-village.jpg",
+  50: "entry-50-casting-spell.jpg",
+  51: "entry-51-may-tour.jpg",
+  52: "entry-52-sleepless-night.jpg",
+  53: "entry-53-breaking-free.jpg",
+  54: "entry-54-forest-path.jpg",
+  55: "entry-55-heavy-fall.jpg",
+  56: "entry-56-vents-telegraph.jpg",
+  57: "entry-57-black-lighthouse.jpg",
+  58: "entry-58-awakened-footsteps.jpg",
+  59: "entry-59-car-accident.jpg",
+  60: "entry-60-mountain-view.jpg",
+  61: "entry-61-observing-lighthouse.jpg",
+  62: "entry-62-vents-library.jpg",
+  63: "entry-63-first-meeting-ruth.jpg",
+  64: "entry-64-empty-kitchen.jpg",
+  65: "entry-65-flames-licking.jpg",
+  66: "entry-66-stonehenge-secret.jpg",
+  67: "entry-67-injured-landing.jpg",
+  68: "entry-68-vents-study.jpg",
+  69: "entry-69-village-secret.jpg",
+  70: "entry-70-battlefield-investigation.jpg",
+  71: "entry-71-talking-silas.jpg",
+  72: "entry-72-solitary-joy.jpg",
+  73: "entry-73-knocked-down.jpg",
+  74: "entry-74-local-history.jpg",
+  75: "entry-75-night-walk.jpg",
+  76: "entry-76-hypnotic-powder.jpg",
+  77: "entry-77-burned-alive-ending.jpg",
+  78: "entry-78-village-survey.jpg",
+  79: "entry-79-night-road.jpg",
+  80: "entry-80-spell-fails.jpg",
+  81: "entry-81-festival-research.jpg",
+  82: "entry-82-rescued-by-villagers.jpg",
+  83: "entry-83-searching-may-bedroom.jpg",
+  84: "entry-84-outside-town-hall.jpg",
+  85: "entry-85-lost-trail.jpg",
+  86: "entry-86-dark-shadow.jpg",
+  87: "entry-87-chase-fails.jpg",
+  88: "entry-88-mars-research.jpg",
+  89: "entry-89-searching-drawers.jpg",
+  90: "entry-90-spell-preparation.jpg",
+  91: "entry-91-stumbling.jpg",
+  92: "entry-92-falling-death.jpg",
+  93: "entry-93-breaking-free-success.jpg",
+  94: "entry-94-reading-magazine.jpg",
+  95: "entry-95-finding-trapdoor-2.jpg",
+  96: "entry-96-craftsmen-yard.jpg",
+  97: "entry-97-forest-tumble.jpg",
+  98: "entry-98-being-watched.jpg",
+  99: "entry-99-research-time.jpg",
+  100: "entry-100-returning-leadbetter.jpg",
+  101: "entry-101-surrounded.jpg",
+  102: "entry-102-archaeologist-backstory.jpg",
+  103: "entry-103-bear-forest.jpg",
+  104: "entry-104-captive-drinking.jpg",
+  105: "entry-105-library-closing.jpg",
+  106: "entry-106-mysterious-workshop.jpg",
+  107: "entry-107-cliff-stairs.jpg",
+  108: "entry-108-captivity.jpg",
+  109: "entry-109-dodging-flames.jpg",
+  110: "entry-110-sneaking-bear.jpg",
+  111: "entry-111-continue-reading.jpg",
+  112: "entry-112-hidden-ladder.jpg",
+  113: "entry-113-refusing-water.jpg",
+  114: "entry-114-cellar-trunks.jpg",
+  115: "entry-115-eastern-road.jpg",
+  116: "entry-116-watching-bear.jpg",
+  117: "entry-117-marched-lighthouse.jpg",
+  118: "entry-118-bookshelf-secret.jpg",
+  119: "entry-119-persuading-guard.jpg",
+  120: "entry-120-village-unrest.jpg",
+  121: "entry-121-chasing-shadow.jpg",
+  122: "entry-122-cautious-retreat.jpg",
+  123: "entry-123-death-ending.jpg",
+  124: "entry-124-library-close.jpg",
+  125: "entry-125-disguise-escape.jpg",
+  126: "entry-126-sneaking-town-hall.jpg",
+  127: "entry-127-mysterious-wave.jpg",
+  128: "entry-128-journey-scenery.jpg",
+  129: "entry-129-bear-leaves.jpg",
+  130: "entry-130-shadow-disappears.jpg",
+  131: "entry-131-starry-night.jpg",
+  132: "entry-132-deceiving-guard.jpg",
+  133: "entry-133-entering-secret-room.jpg",
+  134: "entry-134-agility-check.jpg",
+  135: "entry-135-man-flees.jpg",
+  136: "entry-136-bear-eating.jpg",
+  137: "entry-137-jumping-lighthouse.jpg",
+  138: "entry-138-talking-ruth-plan.jpg",
+  139: "entry-139-caught-villagers.jpg",
+  140: "entry-140-finding-map.jpg",
+  141: "entry-141-chasing-cliff.jpg",
+  142: "entry-142-finding-cave.jpg",
+  143: "entry-143-watching-bear-tree.jpg",
+  144: "entry-144-arriving-ashhead.jpg",
+  145: "entry-145-ruth-warning-detail.jpg",
+  146: "entry-146-disguise-passing.jpg",
+  147: "entry-147-bookshelf-mechanism.jpg",
+  148: "entry-148-fire-dancers-farewell.jpg",
+  149: "entry-149-bear-attack.jpg",
+  150: "entry-150-chasing-man.jpg",
+  151: "entry-151-ruth-disobedient.jpg",
+  152: "entry-152-night-escape.jpg",
+  153: "entry-153-dark-room.jpg",
+  154: "entry-154-fire-dream.jpg",
+  155: "entry-155-racing-bear.jpg",
+  156: "entry-156-finding-bicycle.jpg",
+  157: "entry-157-cramped-room.jpg",
+  158: "entry-158-escape-attempt.jpg",
+  159: "entry-159-stealing-books.jpg",
+  160: "entry-160-deciding-leave.jpg",
+  161: "entry-161-shaking-bear.jpg",
+  162: "entry-162-silas-trick.jpg",
+  163: "entry-163-shadows-surround.jpg",
+  164: "entry-164-being-chased.jpg",
+  165: "entry-165-opening-window.jpg",
+  166: "entry-166-leaving-morning.jpg",
+  167: "entry-167-bear-claw.jpg",
+  168: "entry-168-stars-descend.jpg",
+  169: "entry-169-abogast-truth.jpg",
+  170: "entry-170-subdued.jpg",
+  171: "entry-171-learning-poetry.jpg",
+  172: "entry-172-catching-man.jpg",
+  173: "entry-173-bear-standing.jpg",
+  174: "entry-174-realizing-breakdown.jpg",
+  175: "entry-175-learning-spell.jpg",
+  176: "entry-176-collapsing-roof.jpg",
+  177: "entry-177-finding-fire-book.jpg",
+  178: "entry-178-surveying-cliff.jpg",
+  179: "entry-179-shadow-attack.jpg",
+  180: "entry-180-return-leadbetter-evening.jpg",
+  181: "entry-181-finding-hidden-passage.jpg",
+  182: "entry-182-abogast-leaves.jpg",
+  183: "entry-183-fail-arrested.jpg",
+  184: "entry-184-finding-poetry-book.jpg",
+  185: "entry-185-cycling-escape.jpg",
+  186: "entry-186-after-bear-escape.jpg",
+  187: "entry-187-hidden-stairs.jpg",
+  188: "entry-188-shadow-attack.jpg",
+  189: "entry-189-collapsing-ceiling.jpg",
+  190: "entry-190-discovered.jpg",
+  191: "entry-191-entering-cave.jpg",
+  192: "entry-192-bus-disappears.jpg",
+  193: "entry-193-bear-attack.jpg",
+  194: "entry-194-repairing-bus.jpg",
+  195: "entry-195-abogast-battle.jpg",
+  196: "entry-196-crushed-death.jpg",
+  197: "entry-197-summoning-fire.jpg",
+  198: "entry-198-commanding-fire.jpg",
+  199: "entry-199-abogast-face.jpg",
+  200: "entry-200-missed-meeting.jpg",
+  201: "entry-201-bear-retreats.jpg",
+  202: "entry-202-commanding-spell.jpg",
+  203: "entry-203-hit-attacked.jpg",
+  204: "entry-204-successful-escape-2.jpg",
+  205: "entry-205-dungeon-dark.jpg",
+  206: "entry-206-suspicious-look.jpg",
+  207: "entry-207-escaping-window.jpg",
+  208: "entry-208-forest-climbing.jpg",
+  209: "entry-209-stars-alive.jpg",
+  210: "entry-210-commanding-flames.jpg",
+  211: "entry-211-avoiding-carriage.jpg",
+  212: "entry-212-stairs-hesitation.jpg",
+  213: "entry-213-successful-jump.jpg",
+  214: "entry-214-abogast-anger.jpg",
+  215: "entry-215-continue-night.jpg",
+  216: "entry-216-discovered-carriage.jpg",
+  217: "entry-217-burning-face.jpg",
+  218: "entry-218-depositing-luggage.jpg",
+  219: "entry-219-craftsmen-workshop.jpg",
+  220: "entry-220-awakening-death.jpg",
+  221: "entry-221-abogast-history.jpg",
+  222: "entry-222-falling-tree.jpg",
+  223: "entry-223-successful-escape.jpg",
+  224: "entry-224-fire-dream-second.jpg",
+  225: "entry-225-unlocking.jpg",
+  226: "entry-226-doctor-backstory.jpg",
+  227: "entry-227-abogast-abenaki.jpg",
+  228: "entry-228-sleeping-tree.jpg",
+  229: "entry-229-escape-pursuit.jpg",
+  230: "entry-230-door-handle-turning.jpg",
+  231: "entry-231-revenge-ending.jpg",
+  232: "entry-232-breaking-door.jpg",
+  233: "entry-233-heading-arkham.jpg",
+  234: "entry-234-terrifying-howl.jpg",
+  235: "entry-235-fighting-driver.jpg",
+  236: "entry-236-abogast-dying.jpg",
+  237: "entry-237-abogast-old-ones.jpg",
+  238: "entry-238-discovered-leaving.jpg",
+  239: "entry-239-reporter-backstory.jpg",
+  240: "entry-240-listening-check.jpg",
+  241: "entry-241-defeating-driver.jpg",
+  242: "entry-242-showing-may-scene.jpg",
+  243: "entry-243-self-liberation.jpg",
+  244: "entry-244-discovering-bodies.jpg",
+  245: "entry-245-abogast-villagers.jpg",
+  246: "entry-246-tree-dream.jpg",
+  247: "entry-247-brought-village.jpg",
+  248: "entry-248-may-night-visit.jpg",
+  249: "entry-249-detective-backstory.jpg",
+  250: "entry-250-three-corpses.jpg",
+  251: "entry-251-silas-departure.jpg",
+  252: "entry-252-mysterious-descent.jpg",
+  253: "entry-253-warning-leave.jpg",
+  254: "entry-254-may-fireplace.jpg",
+  255: "entry-255-stars-burned.jpg",
+  256: "entry-256-craftsman-caught.jpg",
+  257: "entry-257-silas-anger.jpg",
+  258: "entry-258-falling-flames.jpg",
+  259: "entry-259-cemetery-meeting.jpg",
+  260: "entry-260-confronting-may.jpg",
+  261: "entry-261-bus-accident.jpg",
+  262: "entry-262-fighting-craftsman.jpg",
+  263: "entry-263-arriving-ashhead-v2.jpg",
+  264: "entry-264-forest-beasts.jpg",
+  265: "entry-265-professor-backstory.jpg",
+  266: "entry-266-hypnotic-smoke.jpg",
+  267: "entry-267-leadbetter-house-v2.jpg",
+  268: "entry-268-defeating-craftsman.jpg",
+  269: "entry-269-beasts-spontaneously-ignite.jpg",
+  270: "entry-270-final-ending.jpg",
+};
+
 function toNode(entry) {
   const directives = entry.directives || [];
   const actions = entry.jumps.map((jump, idx) => toAction(jump, entry.id, idx));
+  const sceneImage = SCENE_IMAGES[entry.num] ? `assets/figures/${SCENE_IMAGES[entry.num]}` : null;
+  // entry.image holds original-text illustrations (shown via lightbox trigger)
   const imageFile = entry.image || (entry.num === 1 ? "opening-full-page.png" : null);
 
   const hasCheckDirective = directives.some(d => d.kind === "check-mention");
@@ -81,26 +364,39 @@ function toNode(entry) {
 
   const pushable = actions.some(a => a.check?.outcome === "pushed_failure");
 
+  const hasCombatScript = (ENTRY_SCRIPTS[entry.id] || []).some(e => e.type === "startCombat");
+
+  // 这些节点可从多条路径到达，onEnterEffects 只应触发一次
+  const ONCE_ONLY_NODES = new Set(["entry-13", "entry-16", "entry-58", "entry-65"]);
+
   const node = {
     id: entry.id,
     code: `条目 ${entry.num}`,
     title: `条目 ${entry.num}`,
-    sliceId: getChapterIdForNum(entry.num),
     sceneMeta: "",
     text: entry.text,
     image: imageFile ? `assets/figures/${imageFile}` : null,
+    sceneImage: sceneImage,
     directives,
     translatorNotes: entry.translatorNotes || [],
     actions,
     pushable,
-    checkHints: directivesToCheckHints(directives),
+    onceOnly: ONCE_ONLY_NODES.has(entry.id),
+    // 有战斗脚本的节点由战斗系统接管，不渲染普通检定 UI
+    checkHints: hasCombatScript ? [] : directivesToCheckHints(directives),
+    // entry-144：二选一单次检定，选定后不能再用另一个技能重试
+    checkMode: entry.id === "entry-144" ? "pick-one" : "normal",
     onEnterEffects: [
-      ...directivesToEffects(directives, false),
-      ...(ENTRY_SCRIPTS[entry.id] || []).filter(e => !e.checkGated)
+      ...directivesToEffects(directives, false, false),
+      ...(ENTRY_SCRIPTS[entry.id] || []).filter(e => !e.checkGated && !e.checkSuccess)
     ],
     checkFailEffects: [
-      ...directivesToEffects(directives, true),
+      ...directivesToEffects(directives, true, false),
       ...(ENTRY_SCRIPTS[entry.id] || []).filter(e => e.checkGated)
+    ],
+    checkSuccessEffects: [
+      ...directivesToEffects(directives, false, true),
+      ...(ENTRY_SCRIPTS[entry.id] || []).filter(e => e.checkSuccess)
     ],
     thresholdGate: THRESHOLD_GATES[entry.id] || null
   };
@@ -110,7 +406,7 @@ function toNode(entry) {
   return node;
 }
 
-function directivesToEffects(directives, checkGatedOnly) {
+function directivesToEffects(directives, checkGatedOnly, checkSuccessOnly) {
   const hasCheck = directives.some(d => d.kind === "check-mention");
   const effects = [];
   for (const d of directives) {
@@ -121,6 +417,7 @@ function directivesToEffects(directives, checkGatedOnly) {
       case "adjustLuck": {
         const isGated = hasCheck;
         if (isGated !== checkGatedOnly) break;
+        if (checkSuccessOnly) break;
         const isFixed = /^\d+$/.test(d.amount);
         if (isFixed) {
           effects.push({ type: d.kind, value: Number(d.amount) * (d.sign || 1) });
@@ -130,7 +427,13 @@ function directivesToEffects(directives, checkGatedOnly) {
         break;
       }
       case "tickSkill":
-        if (checkGatedOnly) break;
+        if (hasCheck) {
+          // 有检定的节点：tick 只在检定成功时触发
+          if (!checkSuccessOnly) break;
+        } else {
+          // 无检定的节点：进入即 tick（已成功的叙述）
+          if (checkSuccessOnly || checkGatedOnly) break;
+        }
         effects.push({ type: "tickSkill", skill: d.skill });
         break;
     }
@@ -175,8 +478,9 @@ const ENTRY_SCRIPTS = {
   "entry-29": [{
     type: "custom",
     fn: (state) => {
-      const dex = state.character.attributes?.DEX ?? 0;
-      const siz = state.character.attributes?.SIZ ?? 0;
+      const attrs = state.character.effectiveAttrs || state.character.rawAttrs || state.character.attributes || {};
+      const dex = attrs.DEX ?? 0;
+      const siz = attrs.SIZ ?? 0;
       if (dex >= siz) {
         state.conditionBranchResult = {
           met: true,
@@ -248,7 +552,7 @@ const ENTRY_SCRIPTS = {
     }
   }],
   "entry-66": [{ type: "tickSkill", skill: "考古学" }],
-  // entry-67: 体质检定，parser处理，无额外效果
+  "entry-67": [{ type: "setFlag", key: "majorWound", value: true }],
   // entry-68: 纯叙事+选择，无脚本
   "entry-69": [{ type: "tickSkill", skill: "侦查" }],
   // entry-70: 纯叙事→entry-78，无脚本
@@ -321,9 +625,9 @@ const ENTRY_SCRIPTS = {
   // entry-96: 心理学检定，parser处理，无额外效果
   "entry-97": [
     { type: "adjustHp", diceExpr: "1D3", sign: -1 },
-    // 急救检定成功→回复1点HP + tickSkill（checkGated）
-    { type: "adjustHp", value: 1, checkGated: true },
-    { type: "tickSkill", skill: "急救", checkGated: true }
+    // 急救检定成功→回复1点HP + tickSkill
+    { type: "adjustHp", value: 1, checkSuccess: true },
+    { type: "tickSkill", skill: "急救", checkSuccess: true }
   ],
   // entry-98: 纯叙事+选择，无脚本
   // entry-99: 信用评级检定，parser处理，无额外效果
@@ -406,7 +710,7 @@ const ENTRY_SCRIPTS = {
   // entry-155: 对抗检定（startCombat已定义），保留
   // entry-156: 纯叙事+选择，无脚本
   // entry-157: 纯叙事+选择，无脚本
-  "entry-158": [{ type: "tickSkill", skill: "潜行", checkGated: true }],
+  "entry-158": [{ type: "tickSkill", skill: "潜行", checkSuccess: true }],
   "entry-159": [{ type: "gainItem", item: "德比诗集《阿撒托斯及其他》" }],
   // entry-160: 纯叙事→entry-25，无脚本
   // entry-161: 纯叙事→entry-79，无脚本
@@ -430,13 +734,13 @@ const ENTRY_SCRIPTS = {
       }
     }
   }],
-  // entry-167: 熊双爪攻击（复杂战斗），见遗留P5
+  // entry-167: 熊双爪攻击（dual-claw 战斗）
   // entry-168: 纯叙事→entry-185，无脚本
   // entry-169: 纯叙事+选择，无脚本
   // entry-170: 纯叙事→entry-108，无脚本
   "entry-171": [
-    { type: "adjustSan", value: -1, checkGated: false },
-    // 理智检定失败额外扣1D4（checkGated），成功只扣1点（已在onEnter）
+    { type: "adjustSan", value: -1, checkSuccess: true },
+    // 理智检定失败额外扣1D4，成功只扣1点
     { type: "adjustSan", diceExpr: "1D4", sign: -1, checkGated: true },
     { type: "adjustSkill", skill: "克苏鲁神话", value: 4 }
     // 结局节点
@@ -450,7 +754,7 @@ const ENTRY_SCRIPTS = {
   // entry-176: 困难力量检定，parser处理，无额外效果
   "entry-177": [{ type: "tickSkill", skill: "图书馆使用" }],
   // entry-178: 侦查检定，parser处理，无额外效果
-  // entry-179: 体质检定，parser处理，无额外效果
+  "entry-179": [{ type: "setFlag", key: "majorWound", value: true }],
   // entry-180: 纯叙事+选择，无脚本
   // entry-181: 纯叙事+选择，无脚本
   // entry-182: 纯叙事→entry-157，无脚本
@@ -482,7 +786,7 @@ const ENTRY_SCRIPTS = {
   // ─── entry-201 到 entry-225 ───
   "entry-201": [
     { type: "tickSkill", skill: "格斗(斗殴)" },
-    { type: "adjustHp", value: 1, checkGated: true }
+    { type: "adjustHp", value: 1, checkSuccess: true }
   ],
   "entry-202": [{ type: "gainItem", item: "号令天之火咒语" }],
   "entry-203": [{ type: "adjustHp", diceExpr: "1D6", sign: -1 }],
@@ -525,7 +829,7 @@ const ENTRY_SCRIPTS = {
   }],
   // entry-223: 结局节点，无脚本
   // entry-224: 纯叙事→entry-26，无脚本
-  "entry-225": [{ type: "tickSkill", skill: "锁匠", checkGated: true }],
+  "entry-225": [{ type: "tickSkill", skill: "锁匠", checkSuccess: true }],
 
   // ─── entry-226 到 entry-250 ───
   // entry-226: 纯叙事（职业介绍：医生）→entry-128，无脚本
@@ -584,6 +888,7 @@ const ENTRY_SCRIPTS = {
   // ─── 战斗场景（保留）───
   "entry-150": [{ type: "startCombat", scriptId: "entry-150" }],
   "entry-155": [{ type: "startCombat", scriptId: "entry-155" }],
+  "entry-167": [{ type: "startCombat", scriptId: "entry-167" }],
   "entry-173": [{ type: "startCombat", scriptId: "entry-173" }],
   "entry-235": [{ type: "startCombat", scriptId: "entry-235" }],
   "entry-262": [{ type: "startCombat", scriptId: "entry-262" }],
@@ -601,9 +906,13 @@ const DERIVED_CN_TO_KEY = {
 function directivesToCheckHints(directives) {
   const hints = [];
   let lastCheck = null;
+  const seenSkills = new Set();
   for (const d of directives) {
     switch (d.kind) {
       case "check-mention": {
+        // 同一技能只保留第一次出现，避免解析器重复提取同一句话产生双重检定 UI
+        if (seenSkills.has(d.skill)) break;
+        seenSkills.add(d.skill);
         let check;
         if (ATTR_CN_TO_KEY[d.skill]) {
           check = { type: "attribute", key: ATTR_CN_TO_KEY[d.skill], skill: d.skill, label: d.skill, difficulty: "regular", mode: "regular" };
@@ -653,13 +962,6 @@ const ENDINGS = [
   { num: 255, tone: "triumph", label: "阻止群星", summary: "你的命令阻止了群星下落，村庄得救。" },
   { num: 270, tone: "triumph", label: "火焰凝固", summary: "火焰停在半空，烬头村的噩梦终结。" }
 ];
-
-function getChapterIdForNum(num) {
-  for (const ch of CHAPTERS) {
-    if (num >= ch.range[0] && num <= ch.range[1]) return ch.id;
-  }
-  return CHAPTERS[0].id;
-}
 
 const nodes = {};
 for (const entry of Object.values(parsed.entries)) {

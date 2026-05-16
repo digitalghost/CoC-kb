@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>向火独行 · 电子陪跑</title>
+  <link rel="icon" type="image/png" href="assets/favicon-32.png" sizes="32x32">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital,wght@0,400;1,400&family=LXGW+WenKai:wght@300;400;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
@@ -15,10 +16,14 @@
 
   <div class="app-shell">
     <header class="app-header">
+      <canvas class="header-canvas" id="headerCanvas" aria-hidden="true"></canvas>
       <div class="header-copy">
-        <p class="eyebrow">Alone Against the Flames</p>
-        <h1>向火独行</h1>
-        <p class="subtitle">1920年代 · 单人模组 · 克苏鲁的呼唤</p>
+        <img class="header-icon" src="assets/icon-64.png" alt="">
+        <div class="header-text">
+          <p class="eyebrow">Alone Against the Flames</p>
+          <h1>向火独行</h1>
+          <p class="subtitle">1920年代 · 单人模组 · 克苏鲁的呼唤</p>
+        </div>
       </div>
 
       <div class="header-actions">
@@ -64,18 +69,20 @@
               <div class="act-title" id="currentActTitle">抵达</div>
               <div class="act-description" id="currentActDescription">长途车与初到烬头村。</div>
             </div>
-            <div class="journey-meta" id="journeyMeta">已走过 0 个节点</div>
+            <div class="journey-meta" id="journeyMeta">
+              <button type="button" class="graph-map-btn" id="graphMapBtn" title="节点图">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="5" cy="12" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="19" cy="19" r="2"/>
+                  <line x1="7" y1="11.5" x2="17" y2="6.5"/><line x1="7" y1="12.5" x2="17" y2="17.5"/>
+                </svg>
+              </button>
+              <span id="journeyMetaText">已走过 0 个节点</span>
+            </div>
             <div class="debug-jump">
+              <span class="debug-jump-hint">仅供调试，游玩请无视</span>
               <input type="number" id="debugJumpInput" min="1" max="270" placeholder="条目 N" />
               <button type="button" id="debugJumpButton">跳到条目</button>
             </div>
-          </section>
-          <section class="panel-card">
-            <div class="panel-header">
-              <h2>叙事脉络</h2>
-              <span class="panel-note">关键转折</span>
-            </div>
-            <div class="milestone-timeline" id="milestoneTimeline"></div>
           </section>
           <section class="panel-card">
             <div class="panel-header">
@@ -87,8 +94,37 @@
       </div>
 
       <section class="story-stage">
+        <!-- 节点图覆盖层 -->
+        <div class="graph-overlay" id="graphOverlay" hidden>
+          <div class="graph-overlay-toolbar">
+            <span class="graph-overlay-title">节点图</span>
+            <div class="graph-overlay-controls">
+              <button class="graph-ctrl-btn" id="graphBtnLabels" title="显示编号">编号</button>
+              <button class="graph-ctrl-btn" id="graphBtnAllEdges" title="显示全部边">全部边</button>
+              <button class="graph-ctrl-btn" id="graphBtnRelayout" title="重新布局">重排</button>
+            </div>
+            <div class="graph-overlay-legend">
+              <span><span class="graph-ld" style="background:#C9A84C"></span>当前</span>
+              <span><span class="graph-ld" style="background:#3D8B6E"></span>已访问</span>
+              <span><span class="graph-ld" style="background:#A63D40"></span>结局</span>
+            </div>
+            <button class="graph-close-btn" id="graphCloseBtn" title="关闭节点图">×</button>
+          </div>
+          <div class="graph-canvas-wrap" id="graphCanvasWrap">
+            <canvas id="graphCanvas"></canvas>
+            <div class="graph-node-panel" id="graphNodePanel"></div>
+          </div>
+        </div>
+
         <div class="scene-card">
-          <article class="scene-text" id="sceneText"></article>
+          <div class="scene-text-wrap">
+            <div class="scene-image-frame">
+              <div class="scene-image-banner" id="sceneImageBanner" hidden>
+                <img id="sceneImageBannerImg" src="" alt="">
+              </div>
+            </div>
+            <article class="scene-text" id="sceneText"></article>
+          </div>
           <div class="action-feedback" id="actionFeedback"></div>
           <div class="action-list" id="actionList"></div>
         </div>
@@ -167,5 +203,127 @@
   </div>
 
   <script type="module" src="js/app.js"></script>
+  <script>
+  (function () {
+    const canvas = document.getElementById('headerCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const PARTICLE_COUNT = 120;
+    const particles = [];
+
+    function rand(min, max) { return min + Math.random() * (max - min); }
+
+    function resetParticle(p, w, h) {
+      p.x = rand(0, w);
+      p.y = rand(h * 0.55, h + 30);
+      p.vy = rand(-0.5, -1.4);
+      p.vx = rand(-0.3, 0.3);
+      p.life = 0;
+      p.maxLife = rand(120, 280);
+      p.r = rand(1.5, 4.0);
+      p.type = Math.random() < 0.55 ? 'ember' : 'smoke';
+    }
+
+    function initParticles(w, h) {
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const p = {};
+        resetParticle(p, w, h);
+        p.life = rand(0, p.maxLife);
+        particles.push(p);
+      }
+    }
+
+    const glows = [
+      { x: 0.10, y: 0.88, r: 0.38, phase: 0,    speed: 0.007, color: [200, 90, 15] },
+      { x: 0.45, y: 0.92, r: 0.30, phase: 1.8,  speed: 0.005, color: [170, 55, 8]  },
+      { x: 0.80, y: 0.80, r: 0.26, phase: 3.5,  speed: 0.009, color: [220, 120, 25] },
+      { x: 0.65, y: 0.95, r: 0.20, phase: 5.1,  speed: 0.012, color: [190, 70, 10] },
+    ];
+
+    let raf;
+    let lastW = 0, lastH = 0;
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      const w = window.innerWidth;
+      const h = window.innerHeight * 0.65;
+      if (w === lastW && h === lastH) return;
+      lastW = w; lastH = h;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (particles.length === 0) initParticles(w, h);
+    }
+
+    function draw() {
+      const w = lastW, h = lastH;
+      if (!w || !h) { raf = requestAnimationFrame(draw); return; }
+
+      ctx.clearRect(0, 0, w, h);
+
+      for (const g of glows) {
+        g.phase += g.speed;
+        const pulse = 0.82 + 0.18 * Math.sin(g.phase);
+        const gx = g.x * w, gy = g.y * h;
+        const gr = g.r * w * pulse;
+        const [r, gv, b] = g.color;
+        const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr);
+        grad.addColorStop(0,   `rgba(${r},${gv},${b},0.32)`);
+        grad.addColorStop(0.4, `rgba(${r},${gv},${b},0.14)`);
+        grad.addColorStop(0.75,`rgba(${r},${gv},${b},0.04)`);
+        grad.addColorStop(1,   `rgba(${r},${gv},${b},0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(gx, gy, gr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      for (const p of particles) {
+        p.life++;
+        if (p.life > p.maxLife) { resetParticle(p, w, h); continue; }
+
+        const t = p.life / p.maxLife;
+        const yFade = Math.max(0, Math.min(1, p.y / (h * 0.45)));
+        const lifeFade = t < 0.12 ? t / 0.12 : t > 0.65 ? (1 - t) / 0.35 : 1;
+        const alpha = lifeFade * yFade;
+
+        p.x += p.vx + Math.sin(p.life * 0.05 + p.x * 0.008) * 0.18;
+        p.y += p.vy;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        if (p.type === 'ember') {
+          const eg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3);
+          eg.addColorStop(0,   'rgba(255, 210, 80, 1.0)');
+          eg.addColorStop(0.3, 'rgba(240, 120, 20, 0.7)');
+          eg.addColorStop(0.7, 'rgba(200, 60, 10, 0.3)');
+          eg.addColorStop(1,   'rgba(160, 40, 5, 0)');
+          ctx.fillStyle = eg;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          const sr = p.r * (1.5 + t * 4);
+          const sg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, sr);
+          sg.addColorStop(0,   'rgba(160, 165, 180, 0.28)');
+          sg.addColorStop(0.5, 'rgba(120, 125, 145, 0.10)');
+          sg.addColorStop(1,   'rgba(90, 95, 115, 0)');
+          ctx.fillStyle = sg;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, sr, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      raf = requestAnimationFrame(draw);
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+    raf = requestAnimationFrame(draw);
+  })();
+  </script>
 </body>
 </html>

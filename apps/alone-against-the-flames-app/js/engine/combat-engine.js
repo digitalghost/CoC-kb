@@ -52,12 +52,18 @@ export function createCombatState(script, character, inventory) {
   if (script.type === "opposed-roll") {
     return createOpposedState(script, character);
   }
+  if (script.type === "dual-claw") {
+    return createDualClawState(script, character);
+  }
   return createMeleeState(script, character, inventory);
 }
 
 export function startCombat(combatState, script) {
   if (script.type === "opposed-roll") {
     return startOpposedRoll(combatState, script);
+  }
+  if (script.type === "dual-claw") {
+    return advanceDualClaw(combatState, script);
   }
   return advanceToNextExchange(combatState, script);
 }
@@ -88,6 +94,8 @@ export function submitRollResult(combatState, script, rollValue) {
       return resolveConCheck(combatState, script, rollValue);
     case "escapeCheck":
       return resolveEscapeCheck(combatState, script, rollValue);
+    case "dualClawHit":
+      return resolveDualClawHit(combatState, script, rollValue);
     default:
       return { state: combatState };
   }
@@ -177,6 +185,99 @@ function resolveOpposedResult(combatState, script, playerRoll) {
   };
 
   return { state: combatState };
+}
+
+// ─── 双爪攻击 (Type C) ───
+
+function createDualClawState(script, character) {
+  return {
+    type: "dual-claw",
+    phase: "ready",
+    playerCurrentHp: character.stats.hp.current,
+    playerMaxHp: character.stats.hp.max,
+    clawIndex: 0,
+    majorWoundTriggered: false,
+    log: [],
+    pendingRoll: null,
+    outcome: null
+  };
+}
+
+function advanceDualClaw(combatState, script) {
+  const claws = script.enemy.claws;
+
+  if (combatState.phase === "ready" || combatState.phase === "exchangeResolved") {
+    if (combatState.clawIndex >= claws.length) {
+      // 两爪都结算完毕
+      const outcomeKey = combatState.majorWoundTriggered ? "majorWound" : "survive";
+      const outcomeData = script.outcomes[outcomeKey];
+      combatState.phase = "combatEnd";
+      combatState.outcome = {
+        result: combatState.majorWoundTriggered ? "lose" : "survive",
+        next: outcomeData.next,
+        summary: outcomeData.summary
+      };
+      return { state: combatState };
+    }
+
+    const claw = claws[combatState.clawIndex];
+    combatState.log.push({
+      text: `${script.enemy.name}发动${claw.label}攻击（命中率 ${claw.skill}%）`,
+      tone: "neutral"
+    });
+
+    combatState.phase = "awaitingRoll";
+    combatState.pendingRoll = {
+      purpose: "dualClawHit",
+      notation: "1d100",
+      label: `${claw.label}命中检定（${claw.skill}%）`,
+      meta: { percentile: true, mode: "regular" },
+      _clawIndex: combatState.clawIndex
+    };
+    return { state: combatState };
+  }
+
+  return { state: combatState };
+}
+
+function resolveDualClawHit(combatState, script, rollValue) {
+  const lastPending = combatState._lastPending;
+  const clawIndex = lastPending?._clawIndex ?? combatState.clawIndex;
+  const claw = script.enemy.claws[clawIndex];
+  const hit = rollValue <= claw.skill;
+
+  combatState.log.push({
+    text: `${claw.label}：掷骰 ${rollValue} / ${claw.skill} → ${hit ? "命中！" : "未命中"}`,
+    tone: hit ? "negative" : "positive"
+  });
+
+  if (hit) {
+    const damage = rollMultiDice(claw.damage);
+    combatState.playerCurrentHp = Math.max(0, combatState.playerCurrentHp - damage);
+    const halfMax = Math.floor(combatState.playerMaxHp / 2);
+    const isMajor = damage >= halfMax;
+
+    combatState.log.push({
+      text: `${claw.label}造成 ${damage} 点伤害（你的 HP: ${combatState.playerCurrentHp}）${isMajor ? "　⚠ 重伤！" : ""}`,
+      tone: "negative"
+    });
+
+    if (isMajor) {
+      combatState.majorWoundTriggered = true;
+    }
+
+    if (combatState.playerCurrentHp <= 0) {
+      combatState.log.push({ text: "你的耐久值归零，倒下了。", tone: "negative" });
+      const outcomeData = script.outcomes.majorWound;
+      combatState.phase = "combatEnd";
+      combatState.outcome = { result: "lose", next: outcomeData.next, summary: "你倒下了。" };
+      return { state: combatState };
+    }
+  }
+
+  combatState.clawIndex = clawIndex + 1;
+  combatState.phase = "exchangeResolved";
+  return advanceDualClaw(combatState, script);
 }
 
 // ─── 多回合近战 (Type B) ───

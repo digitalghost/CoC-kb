@@ -4,9 +4,9 @@ export function renderApp({
   currentNode,
   adapterStatuses,
   chapterGroups,
-  milestones,
   currentCheckResolution,
   pendingCombat,
+  skipTypewriter,
   onAction,
   onReset,
   onJump,
@@ -19,7 +19,6 @@ export function renderApp({
   onSpendLuck
 }) {
   renderActBanner(currentNode, chapterGroups, state);
-  renderMilestoneTimeline(state.flags, milestones);
   renderChapterProgress(state, chapterGroups, moduleData.nodes);
   renderStory(
     currentNode,
@@ -32,9 +31,9 @@ export function renderApp({
     pendingCombat,
     onStartCombat,
     onMpSpend,
-    onSpendLuck
+    onSpendLuck,
+    skipTypewriter
   );
-  renderClueThreads(state.flags, currentNode.id, onJump);
   renderFlags(state.flags);
   renderAdapterStatuses(adapterStatuses);
   renderEchoes(state.echoes);
@@ -50,69 +49,50 @@ export function renderApp({
   if (state.dead && !ending) {
     renderDeathRecap(state, onReset);
   } else if (ending) {
-    renderEndingRecap(ending, state, milestones, onReset);
+    renderEndingRecap(ending, state, onReset);
   } else if (!feedback.childElementCount) {
     feedback.textContent = "";
   }
 }
 
 function renderActBanner(currentNode, chapterGroups, state) {
-  const chapter = chapterGroups.find((ch) => ch.id === currentNode.sliceId) || chapterGroups[0];
-  const actIndex = chapterGroups.indexOf(chapter) + 1;
+  const visitedSet = new Set(state.history);
+  visitedSet.add(state.currentNodeId);
+
+  // 找到最后一个已到达锚点对应的章节
+  let currentChapter = chapterGroups[0];
+  for (const ch of chapterGroups) {
+    if (visitedSet.has(ch.anchorNodeId)) currentChapter = ch;
+  }
+  const actIndex = chapterGroups.indexOf(currentChapter) + 1;
 
   document.getElementById("currentActLabel").textContent = `第${toChineseNum(actIndex)}幕`;
-  document.getElementById("currentActTitle").textContent = chapter.label.replace(/^第.幕 · /, "");
-  document.getElementById("currentActDescription").textContent = chapter.description;
-  document.getElementById("journeyMeta").textContent = `已走过 ${state.history.length} 个节点`;
+  document.getElementById("currentActTitle").textContent = currentChapter.label.replace(/^第.幕 · /, "");
+  document.getElementById("currentActDescription").textContent = currentChapter.description;
+  const journeyMetaText = document.getElementById("journeyMetaText");
+  if (journeyMetaText) journeyMetaText.textContent = `已走过 ${state.history.length} 个节点`;
 }
 
 function toChineseNum(n) {
   return ["一", "二", "三", "四", "五", "六"][n - 1] || String(n);
 }
 
-function renderMilestoneTimeline(flags, milestones) {
-  const container = document.getElementById("milestoneTimeline");
-  container.innerHTML = "";
-
-  const triggered = milestones.filter((m) => flags[m.flag]);
-
-  if (!triggered.length) {
-    const empty = document.createElement("div");
-    empty.className = "milestone-empty";
-    empty.textContent = "尚未触发关键事件";
-    container.appendChild(empty);
-    return;
-  }
-
-  triggered.forEach((milestone) => {
-    const item = document.createElement("div");
-    item.className = "milestone-item";
-    item.innerHTML = `
-      <div class="milestone-dot"></div>
-      <div class="milestone-content">
-        <strong>${milestone.label}</strong>
-        <span>${milestone.description}</span>
-      </div>
-    `;
-    container.appendChild(item);
-  });
-}
-
 function renderChapterProgress(state, chapterGroups, nodes) {
   const container = document.getElementById("chapterProgress");
   container.innerHTML = "";
 
-  const visitedChapters = new Set();
-  state.history.forEach((nodeId) => {
-    const node = nodes[nodeId];
-    if (node) visitedChapters.add(node.sliceId);
-  });
+  const visitedSet = new Set(state.history);
+  visitedSet.add(state.currentNodeId);
 
-  const currentChapter = nodes[state.currentNodeId]?.sliceId;
+  // 找到当前所在章节（最后一个已到达锚点）
+  let currentChapter = chapterGroups[0];
+  for (const ch of chapterGroups) {
+    if (visitedSet.has(ch.anchorNodeId)) currentChapter = ch;
+  }
 
   chapterGroups.forEach((chapter) => {
-    const unlocked = visitedChapters.has(chapter.id);
-    const isCurrent = chapter.id === currentChapter;
+    const unlocked = visitedSet.has(chapter.anchorNodeId);
+    const isCurrent = chapter.id === currentChapter.id;
     const li = document.createElement("li");
     li.className = `chapter-item${unlocked ? " is-unlocked" : " is-locked"}${isCurrent ? " is-current" : ""}`;
     li.innerHTML = `
@@ -121,6 +101,76 @@ function renderChapterProgress(state, chapterGroups, nodes) {
     `;
     container.appendChild(li);
   });
+}
+
+let _typingCancel = null;
+
+function typewriterReveal(container, html, onDone) {
+  if (_typingCancel) { _typingCancel(); _typingCancel = null; }
+
+  const template = document.createElement("div");
+  template.innerHTML = html;
+
+  function walk(node, liveParent) {
+    for (const child of node.childNodes) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        liveParent.appendChild(document.createTextNode(child.textContent));
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        const clone = child.cloneNode(false);
+        liveParent.appendChild(clone);
+        walk(child, clone);
+      }
+    }
+  }
+
+  container.innerHTML = "";
+  walk(template, container);
+
+  // 把所有文本节点内容清空，准备逐字填入
+  const textNodes = [];
+  function collectTextNodes(el) {
+    for (const child of el.childNodes) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        textNodes.push({ node: child, full: child.textContent });
+        child.textContent = "";
+      } else {
+        collectTextNodes(child);
+      }
+    }
+  }
+  collectTextNodes(container);
+
+  let segIdx = 0;
+  let charIdx = 0;
+  let cancelled = false;
+  const DELAY = 28;
+
+  function skip() {
+    cancelled = true;
+    textNodes.forEach(({ node, full }) => { node.textContent = full; });
+    onDone();
+  }
+
+  _typingCancel = skip;
+
+  function tick() {
+    if (cancelled) return;
+    if (segIdx >= textNodes.length) {
+      _typingCancel = null;
+      onDone();
+      return;
+    }
+    const { node, full } = textNodes[segIdx];
+    node.textContent = full.slice(0, charIdx + 1);
+    charIdx++;
+    if (charIdx >= full.length) {
+      segIdx++;
+      charIdx = 0;
+    }
+    setTimeout(tick, DELAY);
+  }
+
+  tick();
 }
 
 function renderStory(
@@ -134,26 +184,27 @@ function renderStory(
   pendingCombat,
   onStartCombat,
   onMpSpend,
-  onSpendLuck
+  onSpendLuck,
+  skipTypewriter = false
 ) {
   const feedback = document.getElementById("actionFeedback");
   feedback.innerHTML = "";
   feedback.textContent = "";
 
   const sceneText = document.getElementById("sceneText");
-  sceneText.innerHTML = formatSceneText(node.text);
+  const bannerWrap = document.getElementById("sceneImageBanner");
+  const bannerImg = document.getElementById("sceneImageBannerImg");
 
-  // 内嵌图片（插在故事文字前）
-  const existingImg = document.getElementById("sceneInlineImage");
-  if (existingImg) existingImg.remove();
-  if (node.image) {
-    const img = document.createElement("img");
-    img.id = "sceneInlineImage";
-    img.className = "scene-inline-image";
-    img.src = node.image;
-    img.alt = node.title || "";
-    sceneText.parentNode.insertBefore(img, sceneText);
+  if (node.sceneImage) {
+    bannerImg.src = node.sceneImage;
+    bannerImg.alt = node.title || "";
+    bannerWrap.hidden = false;
+  } else {
+    bannerWrap.hidden = true;
+    bannerImg.removeAttribute("src");
   }
+
+  // 原文插图图标已移除
 
   renderTransitionBanner(state.lastTransition);
   renderDirectiveBadges(node.directives || []);
@@ -161,8 +212,42 @@ function renderStory(
 
   const actionList = document.getElementById("actionList");
   actionList.innerHTML = "";
+  actionList.style.opacity = "0";
+  actionList.style.transition = "";
+
+  function revealActionList() {
+    requestAnimationFrame(() => {
+      actionList.style.transition = "opacity 300ms ease";
+      actionList.style.opacity = "1";
+    });
+  }
+
+  sceneText.style.cursor = "";
+  sceneText.onclick = null;
+
+  function startTypewriter() {
+    if (skipTypewriter) {
+      sceneText.innerHTML = formatSceneText(node.text);
+      revealActionList();
+      return;
+    }
+    sceneText.style.cursor = "pointer";
+    typewriterReveal(sceneText, formatSceneText(node.text), () => {
+      sceneText.style.cursor = "";
+      sceneText.onclick = null;
+      revealActionList();
+    });
+    sceneText.onclick = () => {
+      if (_typingCancel) {
+        _typingCancel();
+        _typingCancel = null;
+        revealActionList();
+      }
+    };
+  }
 
   if (pendingCombat) {
+    sceneText.innerHTML = formatSceneText(node.text);
     const combatRow = document.createElement("div");
     combatRow.className = "action-row";
     const combatBtn = document.createElement("button");
@@ -177,6 +262,7 @@ function renderStory(
     combatBtn.onclick = () => onStartCombat(pendingCombat);
     combatRow.appendChild(combatBtn);
     actionList.appendChild(combatRow);
+    revealActionList();
     return;
   }
 
@@ -223,6 +309,7 @@ function renderStory(
 
     updateDisplay();
     actionList.appendChild(container);
+    startTypewriter();
     return;
   }
   if (state.conditionBranchResult) {
@@ -246,6 +333,7 @@ function renderStory(
     );
     row.appendChild(btn);
     actionList.appendChild(row);
+    startTypewriter();
     return;
   }
 
@@ -302,6 +390,8 @@ function renderStory(
       actionList.appendChild(row);
     }
   });
+
+  startTypewriter();
 }
 
 function renderCheckHints(
@@ -318,6 +408,9 @@ function renderCheckHints(
   if (!hints.length) {
     return;
   }
+  // pick-one 模式：只要有任意一个检定已完成，其余 hint 的按钮全部锁定
+  const pickOneLocked = node.checkMode === "pick-one" && !!currentCheckResolution;
+
   hints.forEach((hint) => {
     const row = document.createElement("div");
     row.className = "check-hint";
@@ -371,7 +464,12 @@ function renderCheckHints(
 
     const rollTrigger = row.querySelector(".check-roll-button");
     if (rollTrigger) {
-      rollTrigger.addEventListener("click", () => onRollCheck(hint));
+      if (pickOneLocked) {
+        rollTrigger.disabled = true;
+        rollTrigger.textContent = "已选择其他技能";
+      } else {
+        rollTrigger.addEventListener("click", () => onRollCheck(hint));
+      }
     }
     feedback.appendChild(row);
   });
@@ -466,6 +564,7 @@ function renderCandidateMeta(candidates, mode) {
   return `<span>${label} ${candidates.join(" / ")}</span>`;
 }
 
+
 function renderSceneArt(imagePath) {
   const art = document.getElementById("sceneArt");
 
@@ -495,7 +594,14 @@ function renderDirectiveBadges(directives) {
     return;
   }
   container.hidden = false;
+  const seenCheckSkills = new Set();
   directives.forEach((dir) => {
+    // check-hard/check-extreme 难度已合并进 checkHint，badge 层不单独显示
+    if (dir.kind === "check-hard" || dir.kind === "check-extreme") return;
+    if (dir.kind === "check-mention") {
+      if (seenCheckSkills.has(dir.skill)) return;
+      seenCheckSkills.add(dir.skill);
+    }
     const badge = document.createElement("span");
     badge.className = `directive-badge tone-${dir.kind}`;
     badge.textContent = formatDirectiveLabel(dir);
@@ -621,20 +727,6 @@ function renderFlags(flags) {
   });
 }
 
-function renderClueThreads(flags, currentNodeId, onJump) {
-  const container = document.getElementById("clueThreadList");
-  if (!container) return;
-  container.innerHTML = "";
-
-  const empty = document.createElement("div");
-  empty.className = "clue-thread-card is-empty";
-  empty.innerHTML = `
-    <strong>线索面板暂未启用</strong>
-    <p>原线索梳理基于早期手写剧情数据;现已切换到 wiki 全文驱动,线索整理会在后续重新接入。</p>
-  `;
-  container.appendChild(empty);
-}
-
 function renderAdapterStatuses(adapterStatuses) {
   const charEl = document.getElementById("characterAdapterStatus");
   const diceEl = document.getElementById("diceAdapterStatus");
@@ -644,83 +736,7 @@ function renderAdapterStatuses(adapterStatuses) {
   if (contentEl) contentEl.textContent = `内容 adapter: ${adapterStatuses.content}`;
 }
 
-function buildClueThreads(flags) {
-  const threads = [];
-
-  if (flags.heardRuthWarning || flags.heardRuthNightWarning || flags.metRuth) {
-    threads.push({
-      id: "thread-ruth",
-      title: "露丝的警告",
-      status: flags.heardRuthNightWarning ? "已具体化" : "已出现",
-      tone: "warning",
-      nodeId: flags.heardRuthNightWarning ? "entry-138" : "entry-3",
-      cta: flags.heardRuthNightWarning ? "回到露丝夜谈" : "去见露丝",
-      summary: flags.heardRuthNightWarning
-        ? "露丝已经不只是模糊劝你离开。她提到了“不要看上面”“别站在火中间”，说明她知道的东西比大人愿意承认的更多。"
-        : "露丝几次表现出与年龄不符的不安。她对节日和火的恐惧，值得你继续追问。"
-    });
-  }
-
-  if (flags.heardAboutFestival || flags.sawNightLanterns || flags.shadowedNightProcession) {
-    threads.push({
-      id: "thread-festival",
-      title: "节日与夜间火光",
-      status: flags.shadowedNightProcession ? "正在逼近" : "已有迹象",
-      tone: "ember",
-      nodeId: flags.shadowedNightProcession ? "entry-86" : "entry-180",
-      cta: flags.shadowedNightProcession ? "回到夜间火光" : "回到傍晚不安",
-      summary: flags.shadowedNightProcession
-        ? "你已经亲眼看见夜里的火光正汇向某处。现在很难再把所谓节日理解成单纯的村庄庆典。"
-        : "火把游行、灯塔、以及夜里活动起来的村民，正在慢慢拼成同一件事。"
-    });
-  }
-
-  if (flags.visitedBlackStructure || flags.noticedStrangeOrientation || flags.foundAlignmentNote) {
-    threads.push({
-      id: "thread-alignment",
-      title: "黑色建筑与校准",
-      status: flags.foundAlignmentNote ? "线索成串" : "需要解释",
-      tone: "cold",
-      nodeId: flags.foundAlignmentNote ? "entry-118" : "entry-57",
-      cta: flags.foundAlignmentNote ? "回到校准备忘" : "去看黑色建筑",
-      summary: flags.foundAlignmentNote
-        ? "黑色建筑的朝向、图书室里那张校准备忘，以及“让村子对准”的说法已经彼此咬合。你接下来需要找的是：它究竟在对准什么。"
-        : "那座黑色金属建筑的方位和外观都过于刻意。它看起来不像普通村舍，更像整个村子里的某个核心装置。"
-    });
-  }
-
-  if (flags.visitedRuinedChurch || flags.noticedScorchedAltar) {
-    threads.push({
-      id: "thread-church",
-      title: "被掏空的教堂",
-      status: flags.noticedScorchedAltar ? "留下痕迹" : "值得回想",
-      tone: "warning",
-      nodeId: "entry-34",
-      cta: "回到坍圮教堂",
-      summary: flags.noticedScorchedAltar
-        ? "教堂的问题不只是破败。祭坛后的烟痕说明那里曾长期焚烧过什么，而真正的宗教标记几乎都被清掉了。"
-        : "那座教堂的空洞感不像自然荒废，更像有人有选择地把某些意义从里面抹掉。"
-    });
-  }
-
-  if (flags.learnedTelegraphDelay || flags.roadsBlocked || flags.spookedByForestCall) {
-    threads.push({
-      id: "thread-escape",
-      title: "离村为何这么难",
-      status: flags.roadsBlocked ? "已被证实" : "越来越真",
-      tone: "neutral",
-      nodeId: flags.roadsBlocked ? "entry-7" : "entry-28",
-      cta: flags.roadsBlocked ? "回到出村受阻" : "再试离村",
-      summary: flags.roadsBlocked
-        ? "你已经确认两侧村口都有人把守。交通稀薄和电报损坏不再像倒霉巧合，更像村子整体把外部隔在外面。"
-        : "无论是坏掉的电报线，还是树林里的异响，所有与“离开”有关的事情都在变得不自然。"
-    });
-  }
-
-  return threads;
-}
-
-function renderEndingRecap(ending, state, milestones, onReset) {
+function renderEndingRecap(ending, state, onReset) {
   const container = document.getElementById("actionFeedback");
   container.innerHTML = "";
 
@@ -730,7 +746,6 @@ function renderEndingRecap(ending, state, milestones, onReset) {
   const toneIcon = getEndingToneIcon(ending.tone);
   const toneLabel = getEndingToneLabel(ending.tone);
 
-  const triggeredMilestones = milestones.filter((m) => state.flags[m.flag]);
   const skillTicks = state.skillTicks || [];
 
   const hp = state.character.stats.hp;
@@ -769,14 +784,6 @@ function renderEndingRecap(ending, state, milestones, onReset) {
         <strong>${luck}</strong>
       </div>
     </div>
-    ${triggeredMilestones.length ? `
-      <div class="ending-recap-section">
-        <h4>触发的里程碑</h4>
-        <ul class="ending-milestone-list">
-          ${triggeredMilestones.map((m) => `<li><strong>${m.label}</strong><span>${m.description}</span></li>`).join("")}
-        </ul>
-      </div>
-    ` : ""}
     ${skillTicks.length ? `
       <div class="ending-recap-section">
         <h4>技能成长</h4>
@@ -909,16 +916,6 @@ function renderHistory(history, nodeMap) {
       `;
       historyList.appendChild(item);
     });
-}
-
-function inferPhase(node) {
-  const map = {
-    "chapter-1": "抵达烬头",
-    "chapter-2": "白昼调查",
-    "chapter-3": "入夜与节日",
-    "chapter-4": "火焰与终局"
-  };
-  return map[node.sliceId] || "游玩中";
 }
 
 function formatSceneText(raw) {

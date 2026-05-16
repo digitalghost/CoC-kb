@@ -13,10 +13,26 @@ const DEFAULT_CHARACTER = normalizeCharacter({
   hometown: "纽约，纽约州",
   era: "1920s",
   avatar: "",
-  rawAttrs: { STR: 60, CON: 50, SIZ: 55, DEX: 70, APP: 50, INT: 75, POW: 60, EDU: 65 },
-  effectiveAttrs: { STR: 60, CON: 50, SIZ: 55, DEX: 70, APP: 50, INT: 75, POW: 60, EDU: 65 },
-  luck: 55,
-  derived: { HP: 10, MP: 12, SAN: 55, DB: "0", build: -1, MOV: 8, dodge: 35, language: 65 },
+  // 属性按模组条目263原文顺序分配：STR/CON/POW/DEX/APP/SIZ/INT/EDU = 40/50/50/50/60/60/70/80
+  rawAttrs: { STR: 40, CON: 50, SIZ: 60, DEX: 50, APP: 60, INT: 70, POW: 50, EDU: 80 },
+  effectiveAttrs: { STR: 40, CON: 50, SIZ: 60, DEX: 50, APP: 60, INT: 70, POW: 50, EDU: 80 },
+  luck: 50,
+  // HP=(CON+SIZ)/10=11, MP=POW/5=10, SAN=POW=50, DB=0(STR+SIZ=100), MOV=7(STR<SIZ)
+  derived: { HP: 11, MP: 10, SAN: 50, DB: "0", build: 0, MOV: 7, dodge: 25, language: 80 },
+  // 私家侦探本职技能（条目249）：侦查70/心理学60/图书馆使用60/法律50/魅惑50/乔装50/艺术和手艺（摄影）40/潜行40
+  // occ值 = 分配目标值 - 技能基础值
+  skillPoints: {
+    "侦查":           { occ: 45, int: 0, adj: 0 },
+    "心理学":         { occ: 50, int: 0, adj: 0 },
+    "图书馆使用":     { occ: 40, int: 0, adj: 0 },
+    "法律":           { occ: 45, int: 0, adj: 0 },
+    "魅惑":           { occ: 35, int: 0, adj: 0 },
+    "乔装":           { occ: 45, int: 0, adj: 0 },
+    "艺术和手艺（摄影）": { occ: 35, int: 0, adj: 0 },
+    "潜行":           { occ: 20, int: 0, adj: 0 },
+    "信用评级":       { occ: 20, int: 0, adj: 0 }
+  },
+  occSkills: ["侦查", "心理学", "图书馆使用", "法律", "魅惑", "乔装", "艺术和手艺（摄影）", "潜行"],
   equipment: [
     { name: ".32 左轮手枪（柯尔特侦探特装）×1，弹药 24 发" },
     { name: "手电筒（备用电池 ×2）" },

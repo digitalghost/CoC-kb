@@ -1,7 +1,7 @@
 import { characterAdapter, getSkillBase, getSkillTotal, half, fifth } from "../adapters/character-adapter.js";
 import { ATTR_KEYS, ATTR_NAMES } from "../data/skills-data.js";
 
-export function renderCharacterPanel(character, container, skillTicks = []) {
+export function renderCharacterPanel(character, container, skillTicks = [], flags = {}) {
   if (!container || !character) return;
 
   const attrs = character.effectiveAttrs || character.rawAttrs || {};
@@ -13,7 +13,7 @@ export function renderCharacterPanel(character, container, skillTicks = []) {
   const identityMeta = characterAdapter.getIdentityMeta(character);
 
   container.innerHTML = `
-    ${renderIdentity(character, portraitUrl, identityMeta)}
+    ${renderIdentity(character, portraitUrl, identityMeta, flags)}
     ${renderTrackers(trackerBars)}
     ${renderAttributes(attrs)}
     ${renderDerived(derived)}
@@ -24,7 +24,7 @@ export function renderCharacterPanel(character, container, skillTicks = []) {
   bindSkillToggle(container);
 }
 
-function renderIdentity(character, portraitUrl, identityMeta) {
+function renderIdentity(character, portraitUrl, identityMeta, flags = {}) {
   const portraitContent = portraitUrl
     ? `<img class="cp-portrait-img" src="${portraitUrl}" alt="调查员头像" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">`
     : "";
@@ -32,7 +32,10 @@ function renderIdentity(character, portraitUrl, identityMeta) {
   const attrs = character.effectiveAttrs || character.rawAttrs || {};
   const creditFromSkill = getSkillTotal("信用评级", attrs, character.skillPoints || {});
   const creditRating = creditFromSkill || character.creditRating || 0;
-  const creditDisplay = creditRating > 0 ? `<span class="cp-credit">信用评级 ${creditRating}</span>` : "";
+  const creditDisplay = `<span class="cp-credit">信用评级 ${creditRating}</span>`;
+  const majorWoundBadge = flags.majorWound
+    ? `<span class="cp-status-badge cp-status-major-wound">⚠ 重伤</span>`
+    : "";
 
   return `
     <div class="cp-identity">
@@ -45,6 +48,7 @@ function renderIdentity(character, portraitUrl, identityMeta) {
         <span class="cp-occupation">${esc(character.occupation)}</span>
         <span class="cp-meta">${esc(identityMeta)}</span>
         ${creditDisplay}
+        ${majorWoundBadge}
       </div>
     </div>
   `;

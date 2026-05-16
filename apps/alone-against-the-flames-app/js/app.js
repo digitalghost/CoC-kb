@@ -7,29 +7,17 @@ import { createCombatState, startCombat, submitPlayerChoice, submitRollResult, g
 import { renderApp, initPathBarToggle, initCharPanelToggle, initEchoToggle, updatePathBar, updateEchoLastText, updateCharCollapsed, renderChapterProgressBar } from "./ui/render.js";
 import { renderCharacterPanel } from "./ui/character-panel.js";
 import { renderCombatOverlay, openCombatOverlay, closeCombatOverlay } from "./ui/combat-overlay.js";
+import { initGraphMap, openGraphMap, closeGraphMap } from "./ui/graph-map.js";
 
 const contentAdapterStatus =
   "数据来自 wiki fulltext 解析,共 270 条目、12 张插图、422 跳转。检定结果由玩家自掷自判。";
 
-const NARRATIVE_MILESTONES = [
-  { flag: "metRuth", label: "遇见露丝", description: "小女孩的警告" },
-  { flag: "heardAboutFestival", label: "听闻节日", description: "村民提到今晚的庆典" },
-  { flag: "visitedBlackStructure", label: "黑色建筑", description: "发现不协调的金属建筑" },
-  { flag: "visitedRuinedChurch", label: "坍圮教堂", description: "被掏空的信仰痕迹" },
-  { flag: "foundAlignmentNote", label: "校准备忘", description: "「让村子对准」" },
-  { flag: "heardRuthNightWarning", label: "露丝夜谈", description: "「不要看上面」" },
-  { flag: "sawNightLanterns", label: "夜间火光", description: "火把在屋舍间汇聚" },
-  { flag: "shadowedNightProcession", label: "夜间游行", description: "跟踪火光队列" },
-  { flag: "roadsBlocked", label: "出村受阻", description: "确认村口有人把守" },
-  { flag: "decodedMetalSymbols", label: "解读浮雕", description: "仪式布局的节点" }
-];
 
 const chapterGroups = aatfModule.chapters.map((ch) => ({
   id: ch.id,
   label: ch.label,
   description: ch.description,
-  nodeId: ch.anchorNodeId,
-  range: ch.range
+  anchorNodeId: ch.anchorNodeId
 }));
 
 const SAVE_KEY = "aatf-game-state";
@@ -54,7 +42,26 @@ bindResetRun();
 initPathBarToggle();
 initCharPanelToggle();
 initEchoToggle();
-paint();
+initGraphMap();
+bindGraphMapToggle();
+paint(true);
+
+function bindGraphMapToggle() {
+  const openBtn = document.getElementById('graphMapBtn');
+  const closeBtn = document.getElementById('graphCloseBtn');
+  const overlay = document.getElementById('graphOverlay');
+  if (!openBtn || !closeBtn || !overlay) return;
+
+  openBtn.addEventListener('click', () => {
+    overlay.removeAttribute('hidden');
+    openGraphMap(state);
+  });
+
+  closeBtn.addEventListener('click', () => {
+    overlay.setAttribute('hidden', '');
+    closeGraphMap();
+  });
+}
 
 function bindDebugJump() {
   const input = document.getElementById("debugJumpInput");
@@ -71,7 +78,21 @@ function bindDebugJump() {
   });
 }
 
-function paint() {
+function paint(skipTransition = false) {
+  const stage = document.querySelector(".story-stage");
+  if (stage && !skipTransition) {
+    stage.classList.add("fading");
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      _doPaint(false);
+      requestAnimationFrame(() => stage.classList.remove("fading"));
+    }, 150);
+  } else {
+    _doPaint(skipTransition);
+  }
+}
+
+function _doPaint(skipTypewriter = false) {
   const currentNode = decorateNodeChecks(getCurrentNode(aatfModule, state));
   renderApp({
     moduleData: aatfModule,
@@ -83,9 +104,9 @@ function paint() {
       content: contentAdapterStatus
     },
     chapterGroups,
-    milestones: NARRATIVE_MILESTONES,
     currentCheckResolution: lastCheckResolution,
     pendingCombat: state.pendingCombat || null,
+    skipTypewriter,
     onAction: handleAction,
     onReset: handleReset,
     onJump: handleJump,
@@ -97,15 +118,17 @@ function paint() {
     onMpSpend: handleMpSpend,
     onSpendLuck: handleSpendLuck
   });
-  renderCharacterPanel(state.character, document.getElementById("characterPanel"), state.skillTicks);
+  renderCharacterPanel(state.character, document.getElementById("characterPanel"), state.skillTicks, state.flags);
   mountDiceShortcuts(handleQuickRoll);
   renderChapterProgressBar(state, chapterGroups, aatfModule.nodes);
 
   // 更新路径条
-  const chapter = chapterGroups.find(ch => {
-    const node = aatfModule.nodes[state.currentNodeId];
-    return node && ch.id === node.sliceId;
-  }) || chapterGroups[0];
+  const visitedSet = new Set(state.history);
+  visitedSet.add(state.currentNodeId);
+  let chapter = chapterGroups[0];
+  for (const ch of chapterGroups) {
+    if (visitedSet.has(ch.anchorNodeId)) chapter = ch;
+  }
   const actIndex = chapterGroups.indexOf(chapter) + 1;
   const actLabel = `第${"一二三四五六"[actIndex - 1] || actIndex}幕`;
   const nodeNum = (state.currentNodeId || "entry-1").replace("entry-", "");
@@ -216,7 +239,7 @@ function handleRollCheck(check, pushed = false) {
       mode: resolvedCheck.mode || "regular"
     }
   });
-  paint();
+  paint(true);
 }
 
 function handlePushedRoll(check) {
@@ -246,7 +269,7 @@ function handleSpendLuck(luckCost) {
     at: Date.now()
   });
   state.echoes = state.echoes.slice(0, 8);
-  paint();
+  paint(true);
 }
 
 function handleMpSpend(amount) {
@@ -295,13 +318,19 @@ function handleRollComplete(summary) {
   });
   state.echoes = state.echoes.slice(0, 8);
 
+  if (resolution.success) {
+    const currentNode = getCurrentNode(aatfModule, state);
+    if (currentNode.checkSuccessEffects?.length) {
+      applyEffects(state, currentNode.checkSuccessEffects);
+    }
+  }
   if (!resolution.success) {
     const currentNode = getCurrentNode(aatfModule, state);
     if (currentNode.checkFailEffects?.length) {
       applyEffects(state, currentNode.checkFailEffects);
     }
   }
-  paint();
+  paint(true);
 }
 
 // ─── 战斗系统集成 ───
@@ -455,6 +484,7 @@ function saveState() {
     inventory: state.inventory,
     flags: state.flags,
     history: state.history,
+    visitedNodes: [...(state.visitedNodes || [])],
     unlockedEndings: state.unlockedEndings,
     skillTicks: state.skillTicks || [],
     thresholdResult: state.thresholdResult || null,
@@ -482,6 +512,7 @@ function loadSavedState() {
     state.inventory = snapshot.inventory || [];
     state.flags = snapshot.flags || {};
     state.history = snapshot.history || [];
+    state.visitedNodes = new Set(snapshot.visitedNodes || []);
     state.unlockedEndings = snapshot.unlockedEndings || [];
     state.skillTicks = snapshot.skillTicks || [];
     state.thresholdResult = snapshot.thresholdResult || null;

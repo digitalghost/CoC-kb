@@ -13,10 +13,69 @@ export function closeCombatOverlay() {
 export function renderCombatOverlay(combatState, script, callbacks) {
   if (script.type === "opposed-roll") {
     renderOpposedOverlay(combatState, script, callbacks);
+  } else if (script.type === "dual-claw") {
+    renderDualClawOverlay(combatState, script, callbacks);
   } else {
     renderMeleeOverlay(combatState, script, callbacks);
   }
   scrollLogToBottom();
+}
+
+// ─── 双爪攻击 UI ───
+
+function renderDualClawOverlay(combatState, script, callbacks) {
+  const title = document.getElementById("combatTitle");
+  const desc = document.getElementById("combatDescription");
+  const status = document.getElementById("combatStatus");
+  const log = document.getElementById("combatLog");
+  const actions = document.getElementById("combatActions");
+
+  title.textContent = script.label;
+  desc.textContent = script.description;
+
+  const playerPercent = Math.max(0, (combatState.playerCurrentHp / combatState.playerMaxHp) * 100);
+  status.innerHTML = `
+    <div class="combat-status-bar bar-player">
+      <div class="bar-label">
+        <span>你的 HP</span>
+        <span>${combatState.playerCurrentHp} / ${combatState.playerMaxHp}</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: ${playerPercent}%"></div>
+      </div>
+    </div>
+  `;
+
+  renderLog(log, combatState.log);
+  renderDualClawActions(actions, combatState, script, callbacks);
+}
+
+function renderDualClawActions(container, combatState, script, callbacks) {
+  container.innerHTML = "";
+
+  if (combatState.phase === "ready") {
+    const btn = createButton("开始结算", "btn-primary", () => callbacks.onStart());
+    container.appendChild(btn);
+    return;
+  }
+
+  if (combatState.phase === "awaitingRoll" && combatState.pendingRoll) {
+    const roll = combatState.pendingRoll;
+    const btn = createButton(`掷骰：${roll.label}`, "btn-roll", () => callbacks.onRoll(roll));
+    container.appendChild(btn);
+    return;
+  }
+
+  if (combatState.phase === "combatEnd") {
+    const resultDiv = document.createElement("div");
+    resultDiv.className = "combat-result";
+    const resultClass = combatState.outcome.result === "lose" ? "result-lose" : "result-win";
+    resultDiv.innerHTML = `<p class="result-text ${resultClass}">${combatState.outcome.summary}</p>`;
+    container.appendChild(resultDiv);
+
+    const btn = createButton("继续冒险", "btn-primary", () => callbacks.onEnd(combatState.outcome));
+    container.appendChild(btn);
+  }
 }
 
 // ─── 对抗检定 UI ───
