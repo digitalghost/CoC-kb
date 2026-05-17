@@ -17,6 +17,9 @@ workspace-mobile.json
 *.bak
 ~$*
 
+# 构建产物
+dist/
+
 # 系统文件
 Thumbs.db
 ehthumbs.db
